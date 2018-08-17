@@ -1,0 +1,13 @@
+.DS_Store
+.ipynb_checkpoints/
+.idea/
+__pycache__/
+example_data/
+venv/
+ops_lasagna.egg-info/
+*.pyc
+
+!example_data/input/
+!example_data/design.csv
+!example_data/barcodes.csv
+!example_data/Snakefile_20180707_201
