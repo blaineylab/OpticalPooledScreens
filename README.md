@@ -29,6 +29,8 @@ sh install.sh
 To reinstall, just delete the venv directory, re-create it as above, and re-run
 this script.
 
+## Running example code
+
 Once installed, activate the virtual environment from the project directory:
 
 ```bash
@@ -42,11 +44,10 @@ You can then launch a project-specific notebook server:
 jupyter notebook
 ```
 
-The notebook `ops_python.ipynb` demonstrates step-by-step analysis using the high-level functions in `ops.firesnake.Snake`. The analysis pipeline can also be run using snakemake (after activating the virtual envrionment):
+The notebook `ops_python.ipynb` demonstrates step-by-step analysis using the high-level functions in `ops.firesnake.Snake`. The analysis pipeline can also be run using [snakemake](https://snakemake.readthedocs.io/en/stable/) (after activating the virtual envrionment):
 
 
 ```bash
 cd example_data
 snakemake -s Snakefile_20180707_201
 ```
-
