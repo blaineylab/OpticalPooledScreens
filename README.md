@@ -20,13 +20,13 @@ E.g., if miniconda3 is installed in the home directory:
 ~/miniconda3/bin/python -m venv venv
 ```
 
-This creates a virtual environment called venv for project-specific resources. The script in `install.sh` installs required packages into the virtual environment:
+This creates a virtual environment called `venv` for project-specific resources. The script in `install.sh` installs required packages into the virtual environment:
 
 ```bash
 sh install.sh
 ```
 
-To reinstall, just delete the venv directory, re-create it as above, and re-run
+To reinstall, just delete the `venv` directory, re-create it as above, and re-run
 this script.
 
 ## Running example code
