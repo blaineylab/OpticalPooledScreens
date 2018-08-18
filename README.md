@@ -20,7 +20,7 @@ E.g., if [Miniconda](https://conda.io/miniconda.html) is installed in the home d
 ~/miniconda3/bin/python -m venv venv
 ```
 
-This creates a virtual environment called `venv` for project-specific resources. The script in `install.sh` installs required packages into the virtual environment:
+This creates a virtual environment called `venv` for project-specific resources. The commands in `install.sh` add required packages to the virtual environment:
 
 ```bash
 sh install.sh
