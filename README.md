@@ -14,7 +14,7 @@ python3 -m venv venv
 ```
 
 If the python3 command isn't available, you might need to specify the full path.
-E.g., if miniconda3 is installed in the home directory:
+E.g., if [Miniconda](https://conda.io/miniconda.html) is installed in the home directory:
 
 ```bash
 ~/miniconda3/bin/python -m venv venv
