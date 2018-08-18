@@ -321,7 +321,7 @@ class Snake():
 
         df_bases = ops.in_situ.format_bases(values, labels, positions, cycles, bases)
 
-        for k,v in wildcards.items():
+        for k,v in sorted(wildcards.items()):
             df_bases[k] = v
 
         return df_bases
@@ -416,7 +416,7 @@ class Snake():
 
         df = feature_table(data, nuclei, features)
 
-        for k,v in wildcards.items():
+        for k,v in sorted(wildcards.items()):
             df[k] = v
         
         return df

@@ -181,7 +181,7 @@ class Align:
 
     @staticmethod
     def apply_window(data, window):
-        find_border = lambda x: int((x/2) * (1 - 1/window))
+        find_border = lambda x: int((x/2.) * (1 - 1/float(window)))
         i, j = find_border(data.shape[-2]), find_border(data.shape[-1])
         return data[..., i:-i, j:-j]
 
