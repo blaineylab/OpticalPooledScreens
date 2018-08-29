@@ -5,7 +5,7 @@ This repository contains example _in situ_ sequencing-by-synthesis data (in `exa
 
 ### Installation (OSX)
 
-Download the OpticalPooledScreens directory (e.g., on Github use the green "Clone or download" → "Download ZIP").
+Download the OpticalPooledScreens directory (e.g., on Github use the green "Clone or download" button, then "Download ZIP").
 
 In Terminal, go to the OpticalPooledScreens project directory and create a Python 3 virtual environment using a command like:
 
