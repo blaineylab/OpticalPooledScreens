@@ -5,7 +5,7 @@ This repository contains example _in situ_ sequencing-by-synthesis data (in `exa
 
 ### Installation (OSX)
 
-Download the OpticalPooledScreens directory using the green "Clone or download" button on Github.
+Download the OpticalPooledScreens directory (e.g., on Github use the green "Clone or download" → "Download ZIP").
 
 In Terminal, go to the OpticalPooledScreens project directory and create a Python 3 virtual environment using a command like:
 
@@ -13,8 +13,7 @@ In Terminal, go to the OpticalPooledScreens project directory and create a Pytho
 python3 -m venv venv
 ```
 
-If the python3 command isn't available, you might need to specify the full path.
-E.g., if [Miniconda](https://conda.io/miniconda.html) is installed in the home directory:
+If the python3 command isn't available, you might need to specify the full path. E.g., if [Miniconda](https://conda.io/miniconda.html) is installed in the home directory:
 
 ```bash
 ~/miniconda3/bin/python -m venv venv
