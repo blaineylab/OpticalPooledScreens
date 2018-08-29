@@ -10,7 +10,6 @@ import pandas as pd
 import scipy.stats
 
 from scipy import ndimage
-import skfmm
 
 import ops.io
 import ops.utils
@@ -68,12 +67,8 @@ def find_cells(nuclei, mask, remove_boundary_cells=True):
 
     Expands labeled nuclei to cells, constrained to where mask is >0.
     """
-
-    # voronoi
     distance = ndimage.distance_transform_cdt(nuclei == 0)
-
     cells = skimage.morphology.watershed(distance, nuclei, mask=mask)
-
     # remove cells touching the boundary
     if remove_boundary_cells:
         cut = np.concatenate([cells[0,:], cells[-1,:], 
