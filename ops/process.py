@@ -62,6 +62,7 @@ def build_feature_table(stack, labels, features, index):
     
     return pd.concat(results)
 
+
 def find_cells(nuclei, mask, remove_boundary_cells=True):
     """Convert binary mask to cell labels, based on nuclei labels.
 
@@ -69,12 +70,9 @@ def find_cells(nuclei, mask, remove_boundary_cells=True):
     """
 
     # voronoi
-    phi = (nuclei>0) - 0.5
-    speed = mask + 0.1
-    time = skfmm.travel_time(phi, speed)
-    time[nuclei > 0] = 0
+    distance = ndimage.distance_transform_cdt(nuclei == 0)
 
-    cells = skimage.morphology.watershed(time, nuclei, mask=mask)
+    cells = skimage.morphology.watershed(distance, nuclei, mask=mask)
 
     # remove cells touching the boundary
     if remove_boundary_cells:
