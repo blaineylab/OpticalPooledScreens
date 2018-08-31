@@ -1,5 +1,6 @@
 import re
 import os
+from constants import FILE
 
 
 FILE_PATTERN = [
@@ -41,7 +42,8 @@ def parse_filename(filename):
          'well': 'A1',
          'tile': '107',
          'tag': 'max',
-         'ext': 'tif'}
+         'ext': 'tif',
+         'file': 'example_data/input/10X_c1-SBS-1/10X_c1-SBS-1_A1_Tile-107.max.tif'}
     """
     filename = os.path.normpath(filename)
     filename = filename.replace('\\', '/')
@@ -52,6 +54,7 @@ def parse_filename(filename):
         match = re.match(pattern, filename)
         try:
             result = {k:v for k,v in match.groupdict().items() if v is not None}
+            result[FILE] = filename  # convenience, not used by name_file
             return result
         except AttributeError:
             continue
