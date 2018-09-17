@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import six
 import struct
+import warnings
 
 import ops.utils
 import ops.constants
@@ -58,7 +59,9 @@ def grid_view(files, bounds, padding=40, with_mask=False):
 def read_stack(filename, copy=True):
     """Read a .tif file into a numpy array, with optional memory mapping.
     """
-    data = imread(filename, multifile=False)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="not an ome-tiff master file")
+        data = imread(filename, multifile=False)
     # preserve inner singleton dimensions
     while data.shape[0] == 1:
         data = np.squeeze(data, axis=(0,))
