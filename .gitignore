@@ -2,6 +2,7 @@
 .ipynb_checkpoints/
 .idea/
 __pycache__/
+ops_2157/
 
 venv/
 ops_lasagna.egg-info/

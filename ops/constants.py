@@ -22,7 +22,6 @@ SGRNA_NAME = 'sgRNA_name'
 SGRNA_DESIGN = 'sgRNA_design'
 DATASET = 'dataset'
 GENE_SYMBOL = 'gene_symbol'
-FILE = 'file'
 
 STIMULANT = 'stimulant'
 GENE_CLASS = 'gene_class'
