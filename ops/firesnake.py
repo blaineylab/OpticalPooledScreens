@@ -211,7 +211,7 @@ class Snake():
     @staticmethod
     def _transform_log(data, sigma=1, skip_index=None):
         """Apply Laplacian-of-Gaussian filter from scipy.ndimage.
-        Use `skip_index` to skip a channel (e.g., DAPI with `skip_index=0`).
+        Use `skip_index` to skip transforming a channel (e.g., DAPI with `skip_index=0`).
         """
         data = np.array(data)
         loged = ops.process.log_ndi(data, sigma=sigma)
@@ -275,9 +275,16 @@ class Snake():
         return cells
 
     @staticmethod
-    def _find_peaks(data):
+    def _find_peaks(data, remove_index=None, data_index=None):
+        if remove_index is not None:
+            data = remove_channels(data, remove_index)
+
+        if data_index is not None:
+            data = data[data_index]
+
         if data.ndim == 2:
             data = [data]
+
         peaks = [ops.process.find_peaks(x) 
                     if x.max() > 0 else x 
                     for x in data]
@@ -294,14 +301,12 @@ class Snake():
         if remove_index is not None:
             data = remove_channels(data, remove_index)
         
-        maxed = np.zeros_like(data)
-        maxed[:, 1:] = scipy.ndimage.filters.maximum_filter(data[:,1:], size=(1, 1, width, width))
-        maxed[:, 0] = data[:, 0]  # DAPI
+        maxed = scipy.ndimage.filters.maximum_filter(data, size=(1, 1, width, width))
     
         return maxed
 
     @staticmethod
-    def _extract_bases(maxed, peaks, cells, threshold_std, wildcards, bases='GTAC'):
+    def _extract_bases(maxed, peaks, cells, threshold_peaks, wildcards, bases='GTAC'):
         """Assumes sequencing covers 'GTAC'[:channels].
         """
 
@@ -317,7 +322,7 @@ class Snake():
         bases = list(bases)
 
         values, labels, positions = (
-            ops.in_situ.extract_base_intensity(maxed, peaks, cells, threshold_std))
+            ops.in_situ.extract_base_intensity(maxed, peaks, cells, threshold_peaks))
 
         df_bases = ops.in_situ.format_bases(values, labels, positions, cycles, bases)
 
@@ -327,15 +332,17 @@ class Snake():
         return df_bases
 
     @staticmethod
-    def _call_reads(df_bases):
+    def _call_reads(df_bases, correction_only_in_cells):
         """Median correction performed independently for each tile.
+        Use the `correction_only_in_cells` flag to specify if correction
+        is based on reads within cells, or all reads.
         """
         if df_bases is None:
             return
         
         cycles = len(set(df_bases['cycle']))
         return (df_bases
-            .pipe(ops.in_situ.clean_up_bases)
+            .pipe(ops.in_situ.clean_up_bases, correction_only_in_cells=correction_only_in_cells)
             .pipe(ops.in_situ.do_median_call, cycles)
             )
 
