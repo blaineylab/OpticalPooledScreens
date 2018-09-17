@@ -6,10 +6,10 @@ import ops.utils
 IMAGING_ORDER = 'GTAC'
 
 
-def extract_base_intensity(maxed, peaks, cells, threshold_std):
+def extract_base_intensity(maxed, peaks, cells, threshold_peaks):
 
-    # only analyze reads inside cells 
-    read_mask = (peaks > threshold_std) & (cells > 0)
+    # reads outside of cells get label 0
+    read_mask = (peaks > threshold_peaks)
     values = maxed[:, :, read_mask].transpose([2, 0, 1])
     labels = cells[read_mask]
     positions = np.array(np.where(read_mask)).T
@@ -37,12 +37,26 @@ def format_bases(values, labels, positions, cycles, bases):
     return df
 
 
-def do_median_call(df_bases, cycles=12, channels=4):
-  X = dataframe_to_values(df_bases, channels=channels)
-  Y, W = transform_medians(X.reshape(-1, channels))
+def do_median_call(df_bases, cycles=12, channels=4, correction_only_in_cells=False):
+    """Call reads from raw base signal using median correction. Use the 
+    `correction_within_cells` flag to specify if correction is based on reads within 
+    cells, or all reads.
+    """
+    if correction_only_in_cells:
+        # first obtain transformation matrix W
+        X_ = dataframe_to_values(df_bases.query('cell > 0'), channels=channels)
+        _, W = transform_medians(X_.reshape(-1, channels))
 
-  df_reads = call_barcodes(df_bases, Y, cycles=cycles, channels=channels)
-  return df_reads.drop([CHANNEL, INTENSITY], axis=1)
+        # then apply to all data
+        X = dataframe_to_values(df_bases, channels=channels)
+        Y = W.dot(X.reshape(-1, channels).T).T.astype(int)
+    else:
+        X = dataframe_to_values(df_bases, channels=channels)
+        Y, W = transform_medians(X.reshape(-1, channels))
+
+    df_reads = call_barcodes(df_bases, Y, cycles=cycles, channels=channels)
+
+    return df_reads
 
 
 def clean_up_bases(df_bases):
@@ -109,16 +123,16 @@ def transform_medians(X):
 def call_barcodes(df_bases, Y, cycles=12, channels=4):
     bases = sorted(IMAGING_ORDER[:channels])
     df_reads = df_bases.drop_duplicates([WELL, TILE, READ]).copy()
-    df_reads[CYCLES_IN_SITU] = call_bases_fast(Y.reshape(-1, cycles, channels), bases)
+    df_reads[BARCODE] = call_bases_fast(Y.reshape(-1, cycles, channels), bases)
     Q = quality(Y.reshape(-1, cycles, channels))
     # needed for performance later
     for i in range(len(Q[0])):
         df_reads['Q_%d' % i] = Q[:,i]
  
-    # cycles converted straight to barcodes
-    df_reads = df_reads.rename(columns={CYCLES_IN_SITU: BARCODE})
-    df_reads['Q_min'] = df_reads.filter(regex='Q_\d+').min(axis=1)
-    return df_reads
+    return (df_reads
+        .assign(Q_min=lambda x: x.filter(regex='Q_\d+').min(axis=1))
+        .drop([CYCLE, CHANNEL, INTENSITY], axis=1)
+        )
 
 
 def call_bases_fast(values, bases):
