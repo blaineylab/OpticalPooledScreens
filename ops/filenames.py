@@ -75,6 +75,8 @@ def name_file(description, **more_description):
         else:
             d[k] = v
 
+    d = {k: v for k,v in d.items() if v is not None}
+
     assert 'tag' in d
 
     if 'cycle' in d:
@@ -98,4 +100,11 @@ def name_file(description, **more_description):
     optional = lambda x: d.get(x, '')
     filename = os.path.join(optional('home'), optional('dataset'), optional('subdir'), basename)
     return os.path.normpath(filename)
+
+def guess_filename(row, tag, **override_fields):
+    description = {'subdir': 'process', 'mag': '10X', 
+                    'tag': tag, 'ext': 'tif'}
+    description.update(row.to_dict())
+    description.update(override_fields)
+    return name_file(description)
 
