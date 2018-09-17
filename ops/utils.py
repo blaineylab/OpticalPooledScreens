@@ -159,7 +159,7 @@ def montage(arr, shape=None):
     return M
 
 
-def tile(arr, m, n, pad=None):
+def make_tiles(arr, m, n, pad=None):
     """Divide a stack of images into tiles of size m x n. If m or n is between 
     0 and 1, it specifies a fraction of the input size. If pad is specified, the
     value is used to fill in edges, otherwise the tiles may not be equally sized.
@@ -295,6 +295,101 @@ def offset(stack, offsets):
     return stack    
 
 
+def join_stacks(*args):
+    def with_default(arg):
+        try:
+            arr, code = arg
+            return arr, code
+        except ValueError:
+            return arg, ''
+
+    def expand_dims(arr, n):
+        if arr.ndim < n:
+            return expand_dims(arr[None], n)
+        return arr
+
+    def expand_code(arr, code):
+        return code + '.' * (arr.ndim - len(code))
+
+    def validate_code(arr, code):
+        if code.count('a') > 1:
+            raise ValueError('cannot append same array along multiple dimensions')
+        if len(code) > arr.ndim:
+            raise ValueError('length of code greater than number of dimensions')
+
+    def mark_all_appends(codes):
+        arr = []
+        for pos in zip(*codes):
+            if 'a' in pos:
+                if 'r' in pos:
+                    raise ValueError('cannot repeat and append along the same axis')
+                pos = 'a' * len(pos)
+            arr += [pos]
+        return [''.join(code) for code in zip(*arr)]
+
+    def special_case_no_ops(args):
+        if all([c == '.' for _, code in args for c in code]):
+            return [(arr[None], 'a' + code) for arr, code in args]
+        return args
+    
+    # insert default code (only dots)
+    args = [with_default(arg) for arg in args]
+    # expand the dimensions of the input arrays
+    output_ndim = max(arr.ndim for arr, _ in args)
+    args = [(expand_dims(arr, output_ndim), code) for arr, code in args]
+    # add trailing dots to codes
+    args = [(arr, expand_code(arr, code)) for arr, code in args]
+    # if no codes are provided, interpret as appending along a new dimension
+    args = special_case_no_ops(args)
+    # recalculate due to special case
+    output_ndim = max(arr.ndim for arr, _ in args)
+    
+    [validate_code(arr, code) for arr, code in args]
+    # if any array is appended along an axis, every array must be
+    # input codes are converted from dot to append for those axes
+    codes = mark_all_appends([code for _, code in args])
+    args = [(arr, code) for (arr, _), code in zip(args, codes)]
+
+    # calculate shape for output array
+    # uses numpy addition rule to determine output dtype
+    output_dtype = sum([arr.flat[:1] for arr, _ in args]).dtype
+    output_shape = [0] * output_ndim
+    for arr, code in args:
+        for i, c in enumerate(code):
+            s = arr.shape[i]
+            if c == '.':
+                if output_shape[i] == 0 or output_shape[i] == s:
+                    output_shape[i] = s
+                else:
+                    error = 'inconsistent shapes {0}, {1} at axis {2}'
+                    raise ValueError(error.format(output_shape[i], s, i))
+
+    for arg, code in args:
+        for i, c in enumerate(code):
+            s = arg.shape[i]
+            if c == 'a':
+                output_shape[i] += s
+    
+    output = np.zeros(output_shape, dtype=output_dtype)
+    
+    # assign from input arrays to output 
+    # (values automatically coerced to most general numeric type)
+    slices_so_far = [0] * output_ndim
+    for arr, code in args:
+        slices = []
+        for i, c in enumerate(code):
+            if c in 'r.':
+                slices += [slice(None)]
+            if c == 'a':
+                s = slices_so_far[i]
+                slices += [slice(s, s + arr.shape[i])]
+                slices_so_far[i] += arr.shape[i]
+
+        output[tuple(slices)] = arr
+        
+    return output
+
+# SCIKIT-IMAGE
 def regionprops(labeled, intensity_image):
     """Supplement skimage.measure.regionprops with additional field `intensity_image_full` 
     containing multi-dimensional intensity image.
