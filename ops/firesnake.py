@@ -15,175 +15,21 @@ import ops.in_situ
 from ops.process import Align
 
 
-def load_well_tile_list(filename):
-    wells, tiles = pd.read_pickle(filename)[['well', 'tile']].values.T
-    return wells, tiles
-
-
-def load_csv(f):
-    with open(f, 'r') as fh:
-        txt = fh.readline()
-    sep = ',' if ',' in txt else '\s+'
-    return pd.read_csv(f, sep=sep)
-
-
-def load_pkl(f):
-    return pd.read_pickle(f)
-
-
-def load_tif(f):
-    return ops.io.read_stack(f)
-
-
-def save_csv(f, df):
-    df.to_csv(f, index=None)
-
-
-def save_pkl(f, df):
-    df.to_pickle(f)
-
-
-def save_tif(f, data_, **kwargs):
-    kwargs, _ = restrict_kwargs(kwargs, ops.io.save_stack)
-    # make sure `data` doesn't come from the Snake method since it's an
-    # argument name for the save function, too
-    kwargs['data'] = data_
-    ops.io.save_stack(f, **kwargs)
-
-
-def restrict_kwargs(kwargs, f):
-    f_kwargs = set(get_kwarg_defaults(f).keys()) | set(get_arg_names(f))
-    keep, discard = {}, {}
-    for key in kwargs.keys():
-        if key in f_kwargs:
-            keep[key] = kwargs[key]
-        else:
-            discard[key] = kwargs[key]
-    return keep, discard
-
-
-def load_file(f):
-    if not isinstance(f, str):
-        raise TypeError
-    if not os.path.isfile(f):
-        raise IOError(2, 'Not a file: {0}'.format(f))
-    if f.endswith('.tif'):
-        return load_tif(f)
-    elif f.endswith('.pkl'):
-        return load_pkl(f)
-    elif f.endswith('.csv'):
-        return load_csv(f)
-    else:
-        raise IOError(f)
-
-
-def load_arg(x):
-    """What to do if load_file finds a file but raises an error?
-    """
-    one_file = load_file
-    many_files = lambda x: [load_file(f) for f in x]
-    
-    for f in one_file, many_files:
-        try:
-            return f(x)
-        except (pd.errors.EmptyDataError, TypeError, IOError) as e:
-            if isinstance(e, (TypeError, IOError)):
-                # wasn't a file, probably a string arg
-                pass
-            elif isinstance(e, pd.errors.EmptyDataError):
-                # failed to load file
-                return None
-            pass
-    else:
-        return x
-
-
-def save_output(f, x, **kwargs):
-    """Saves a single output file. Can extend to list if needed.
-    Saving .tif might use kwargs (luts, ...) from input.
-    """
-    if x is None:
-        # need to save dummy output to satisfy Snakemake
-        with open(f, 'w') as fh:
-            pass
-        return
-    f = str(f)
-    if f.endswith('.tif'):
-        return save_tif(f, x, **kwargs)
-    elif f.endswith('.pkl'):
-        return save_pkl(f, x)
-    elif f.endswith('.csv'):
-        return save_csv(f, x)
-    else:
-        raise ValueError('not a recognized filetype: ' + f)
-
-
-def get_arg_names(f):
-    argspec = inspect.getargspec(f)
-    if argspec.defaults is None:
-        return argspec.args
-    n = len(argspec.defaults)
-    return argspec.args[:-n]
-
-
-def get_kwarg_defaults(f):
-    argspec = inspect.getargspec(f)
-    if argspec.defaults is None:
-        return {}
-    defaults = {k: v for k,v in zip(argspec.args[::-1], argspec.defaults[::-1])}
-    return defaults
-
-
-def remove_channels(data, remove_index):
-    channels_mask = np.ones(data.shape[-3], dtype=bool)
-    channels_mask[remove_index] = False
-    data = data[..., channels_mask, :, :]
-    return data
-
-
-def call_from_snakemake(f):
-    """Turn a function that acts on a mix of image data, table data and other 
-    arguments and may return image or table data into a function that acts on 
-    filenames for image and table data, plus other arguments.
-
-    If output filename is provided, saves return value of function.
-
-    Supported filetypes are .pkl, .csv, and .tif.
-    """
-    def g(**kwargs):
-
-        # split keyword arguments into input (needed for function)
-        # and output (needed to save result)
-        input_kwargs, output_kwargs = restrict_kwargs(kwargs, f)
-
-        # load arguments provided as filenames
-        input_kwargs = {k: load_arg(v) for k,v in input_kwargs.items()}
-
-        result = f(**input_kwargs)
-
-        if 'output' in output_kwargs:
-            save_output(output_kwargs['output'], result, **output_kwargs)
-
-    return functools.update_wrapper(g, f)
-
-
 class Snake():
-    @staticmethod
-    def add_method(class_, name, f):
-        f = staticmethod(f)
-        exec('%s.%s = f' % (class_, name))
+	"""Container class for methods that act directly on data (names start with
+	underscore) and methods that act on arguments from snakemake (e.g., filenames
+	provided instead of image and table data). The snakemake methods (no underscore)
+	are automatically loaded by `Snake.load_methods`.
+	"""
 
     @staticmethod
-    def load_methods():
-        methods = inspect.getmembers(Snake)
-        for name, f in methods:
-            if name not in ('__doc__', '__module__') and name.startswith('_'):
-                Snake.add_method('Snake', name[1:], call_from_snakemake(f))
+    def _align_SBS(data, method='DAPI', upsample_factor=2, window=4):
+        """Rigid alignment of sequencing cycles and channels. 
 
-    @staticmethod
-    def _align(data, method='DAPI', upsample_factor=2, window=4):
-        """Expects input array of dimensions (CYCLE, CHANNEL, I, J).
-        If window is 
+        Expects `data` to be an array with dimensions (CYCLE, CHANNEL, I, J).
+        A centered subset of data is used if `window` is greater 
+        than one. Subpixel alignment is done if `upsample_factor` is greater than
+        one (can be slow).
         """
         data = np.array(data)
         assert data.ndim == 4, 'Input data must have dimensions CYCLE, CHANNEL, I, J'
@@ -209,6 +55,61 @@ class Snake():
         return aligned
 
     @staticmethod
+    def _align_by_DAPI(data_1, data_2, channel_index=0):
+        """Align the second image to the first, using the channel at position 
+        `channel_index`. The first channel is usually DAPI.
+        """
+       	images = data_1[channel_index], data_2[channel_index]
+        _, offset = ops.process.Align.calculate_offsets(images)
+        offsets = [offset] * len(data_2)
+        aligned = ops.process.Align.apply_offsets(data_2, offsets)
+        return aligned
+
+    @staticmethod
+    def _segment_nuclei(data, threshold, area_min, area_max):
+        """Find nuclei from DAPI. Find cell foreground from aligned but unfiltered 
+        data. Expects data to have shape (CHANNEL, I, J).
+        """
+
+        if isinstance(data, list):
+            dapi = data[0]
+        elif data.ndim == 3:
+            dapi = data[0]
+
+        kwargs = dict(threshold=lambda x: threshold, 
+            area_min=area_min, area_max=area_max)
+
+        # skimage precision warning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            nuclei = ops.process.find_nuclei(dapi, **kwargs)
+        return nuclei.astype(np.uint16)
+
+    @staticmethod
+    def _segment_cells(data, nuclei, threshold):
+        """Segment cells from aligned data. Matches cell labels to nuclei labels.
+        Note that labels can be skipped, for example if cells are touching the 
+        image boundary.
+        """
+        if data.ndim == 4:
+            # no DAPI, min over cycles, mean over channels
+            mask = data[:, 1:].min(axis=0).mean(axis=0)
+        else:
+            mask = np.median(data[1:], axis=0)
+
+        mask = mask > threshold
+        try:
+            # skimage precision warning
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                cells = ops.process.find_cells(nuclei, mask)
+        except ValueError:
+            print('segment_cells error -- no cells')
+            cells = nuclei
+
+        return cells
+
+    @staticmethod
     def _transform_log(data, sigma=1, skip_index=None):
         """Apply Laplacian-of-Gaussian filter from scipy.ndimage.
         Use `skip_index` to skip transforming a channel (e.g., DAPI with `skip_index=0`).
@@ -232,50 +133,10 @@ class Snake():
         return consensus
     
     @staticmethod
-    def _segment_nuclei(data, threshold, area_min, area_max):
-        """Find nuclei from DAPI. Find cell foreground from aligned but unfiltered 
-        data. Expects data to have shape C x I x J.
-        """
-
-        if isinstance(data, list):
-            dapi = data[0]
-        elif data.ndim == 3:
-            dapi = data[0]
-
-        kwargs = dict(threshold=lambda x: threshold, 
-            area_min=area_min, area_max=area_max)
-
-        # skimage precision warning
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            nuclei = ops.process.find_nuclei(dapi, **kwargs)
-        return nuclei.astype(np.uint16)
-
-    @staticmethod
-    def _segment_cells(data, nuclei, threshold):
-        """Segment cells from aligned data. To use less than full cycles for 
-        segmentation, filter the input files. Matches cell labels to nuclei labels.
-        """
-        if data.ndim == 4:
-            # no DAPI, min over cycles, mean over channels
-            mask = data[:, 1:].min(axis=0).mean(axis=0)
-        else:
-            mask = np.median(data[1:], axis=0)
-
-        mask = mask > threshold
-        try:
-            # skimage precision warning
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                cells = ops.process.find_cells(nuclei, mask)
-        except ValueError:
-            print('segment_cells error -- no cells')
-            cells = nuclei
-
-        return cells
-
-    @staticmethod
     def _find_peaks(data, remove_index=None, data_index=None):
+    	"""Find local maxima and label by difference to next-highest neighboring
+    	pixel.
+    	"""
         if remove_index is not None:
             data = remove_channels(data, remove_index)
 
@@ -293,6 +154,8 @@ class Snake():
 
     @staticmethod
     def _max_filter(data, width, remove_index=None):
+    	"""Apply a maximum filter in a window of `width`.
+    	"""
         import scipy.ndimage.filters
 
         if data.ndim == 3:
@@ -307,7 +170,9 @@ class Snake():
 
     @staticmethod
     def _extract_bases(maxed, peaks, cells, threshold_peaks, wildcards, bases='GTAC'):
-        """Assumes sequencing covers 'GTAC'[:channels].
+        """Find the signal intensity from `maxed` at each non-zero point in `peaks`. Output
+        is labeled by `wildcards` (typically well and tile) and label at that position in
+        integer mask `cells`.
         """
 
         if maxed.ndim == 3:
@@ -356,13 +221,21 @@ class Snake():
         return ops.in_situ.call_cells(df_reads)
 
     @staticmethod
-    def _align_phenotype(data_DO, data_phenotype):
-        """Align using DAPI.
+    def _extract_features(data, nuclei, wildcards, features=None):
+        """Extracts features in dictionary and combines with generic region
+        features.
         """
-        _, offset = ops.process.Align.calculate_offsets([data_DO[0], data_phenotype[0]])
-        offsets = [offset] * len(data_phenotype)
-        aligned = ops.process.Align.apply_offsets(data_phenotype, offsets)
-        return aligned
+        from ops.process import feature_table
+        from ops.features import features_cell
+        features = features.copy() if features else dict()
+        features.update(features_cell)
+
+        df = feature_table(data, nuclei, features)
+
+        for k,v in sorted(wildcards.items()):
+            df[k] = v
+        
+        return df
 
     @staticmethod
     def _extract_phenotype_FR(data_phenotype, nuclei, wildcards):
@@ -412,25 +285,187 @@ class Snake():
         return Snake._extract_phenotype_translocation(data_phenotype, inner_ring, perimeter, wildcards)
 
     @staticmethod
-    def _extract_features(data, nuclei, wildcards, features=None):
-        """Extracts features in dictionary and combines with generic region
-        features.
-        """
-        from ops.process import feature_table
-        from ops.features import features_cell
-        features = features.copy() if features else dict()
-        features.update(features_cell)
-
-        df = feature_table(data, nuclei, features)
-
-        for k,v in sorted(wildcards.items()):
-            df[k] = v
-        
-        return df
-
-    @staticmethod
     def _extract_minimal_phenotype(data_phenotype, nuclei, wildcards):
         return Snake._extract_features(data, nuclei, wildcards, dict())
+
+    @staticmethod
+    def add_method(class_, name, f):
+        f = staticmethod(f)
+        exec('%s.%s = f' % (class_, name))
+
+    @staticmethod
+    def load_methods():
+        methods = inspect.getmembers(Snake)
+        for name, f in methods:
+            if name not in ('__doc__', '__module__') and name.startswith('_'):
+                Snake.add_method('Snake', name[1:], call_from_snakemake(f))
+
+
+def call_from_snakemake(f):
+    """Turn a function that acts on a mix of image data, table data and other 
+    arguments and may return image or table data into a function that acts on 
+    filenames for image and table data, plus other arguments.
+
+    If output filename is provided, saves return value of function.
+
+    Supported input and output filetypes are .pkl, .csv, and .tif.
+    """
+    def g(**kwargs):
+
+        # split keyword arguments into input (needed for function)
+        # and output (needed to save result)
+        input_kwargs, output_kwargs = restrict_kwargs(kwargs, f)
+
+        # load arguments provided as filenames
+        input_kwargs = {k: load_arg(v) for k,v in input_kwargs.items()}
+
+        result = f(**input_kwargs)
+
+        if 'output' in output_kwargs:
+            save_output(output_kwargs['output'], result, **output_kwargs)
+
+    return functools.update_wrapper(g, f)
+
+
+def remove_channels(data, remove_index):
+	"""Remove channel or list of channels from array of shape (..., CHANNELS, I, J).
+	"""
+    channels_mask = np.ones(data.shape[-3], dtype=bool)
+    channels_mask[remove_index] = False
+    data = data[..., channels_mask, :, :]
+    return data
+
+
+def load_arg(x):
+    """Try loading data from `x` if it is a string or list of strings.
+    If that fails just return `x`.
+    """
+    one_file = load_file
+    many_files = lambda x: [load_file(f) for f in x]
+    
+    for f in one_file, many_files:
+        try:
+            return f(x)
+        except (pd.errors.EmptyDataError, TypeError, IOError) as e:
+            if isinstance(e, (TypeError, IOError)):
+                # wasn't a file, probably a string arg
+                pass
+            elif isinstance(e, pd.errors.EmptyDataError):
+                # failed to load file
+                return None
+            pass
+    else:
+        return x
+
+
+def save_output(filename, data, **kwargs):
+    """Saves `data` to `filename`. Guesses the save function based on the
+    file extension. Saving as .tif passes on kwargs (luts, ...) from input.
+    """
+    filename = str(filename)
+    if data is None:
+        # need to save dummy output to satisfy Snakemake
+        with open(filename, 'w') as fh:
+            pass
+        return
+    
+    if f.endswith('.tif'):
+        return save_tif(f, x, **kwargs)
+    elif f.endswith('.pkl'):
+        return save_pkl(f, x)
+    elif f.endswith('.csv'):
+        return save_csv(f, x)
+    else:
+        raise ValueError('not a recognized filetype: ' + f)
+
+
+def load_well_tile_list(filename):
+    wells, tiles = pd.read_pickle(filename)[['well', 'tile']].values.T
+    return wells, tiles
+
+
+def load_csv(f):
+    with open(f, 'r') as fh:
+        txt = fh.readline()
+    sep = ',' if ',' in txt else '\s+'
+    return pd.read_csv(f, sep=sep)
+
+
+def load_pkl(f):
+    return pd.read_pickle(f)
+
+
+def load_tif(f):
+    return ops.io.read_stack(f)
+
+
+def save_csv(f, df):
+    df.to_csv(f, index=None)
+
+
+def save_pkl(f, df):
+    df.to_pickle(f)
+
+
+def save_tif(f, data_, **kwargs):
+    kwargs, _ = restrict_kwargs(kwargs, ops.io.save_stack)
+    # make sure `data` doesn't come from the Snake method since it's an
+    # argument name for the save function, too
+    kwargs['data'] = data_
+    ops.io.save_stack(f, **kwargs)
+
+
+def restrict_kwargs(kwargs, f):
+	"""Partition `kwargs` into two dictionaries based on overlap with default 
+	arguments of function `f`.
+	"""
+    f_kwargs = set(get_kwarg_defaults(f).keys()) | set(get_arg_names(f))
+    keep, discard = {}, {}
+    for key in kwargs.keys():
+        if key in f_kwargs:
+            keep[key] = kwargs[key]
+        else:
+            discard[key] = kwargs[key]
+    return keep, discard
+
+
+def load_file(f):
+	"""Attempt to load file, raising an error if the file is not found or 
+	the file extension is not recognized.
+	"""
+    if not isinstance(f, str):
+        raise TypeError
+    if not os.path.isfile(f):
+        raise IOError(2, 'Not a file: {0}'.format(f))
+    if f.endswith('.tif'):
+        return load_tif(f)
+    elif f.endswith('.pkl'):
+        return load_pkl(f)
+    elif f.endswith('.csv'):
+        return load_csv(f)
+    else:
+        raise IOError(f)
+
+
+def get_arg_names(f):
+	"""List of regular and keyword argument names from function definition.
+	"""
+    argspec = inspect.getargspec(f)
+    if argspec.defaults is None:
+        return argspec.args
+    n = len(argspec.defaults)
+    return argspec.args[:-n]
+
+
+def get_kwarg_defaults(f):
+	"""Get the kwarg defaults as a dictionary.
+	"""
+    argspec = inspect.getargspec(f)
+    if argspec.defaults is None:
+        defaults = {}
+    else:
+    	defaults = {k: v for k,v in zip(argspec.args[::-1], argspec.defaults[::-1])}
+    return defaults
 
 
 Snake.load_methods()
