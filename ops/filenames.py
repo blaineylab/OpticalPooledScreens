@@ -1,6 +1,6 @@
 import re
 import os
-from constants import FILE
+from ops.constants import FILE
 
 
 FILE_PATTERN = [

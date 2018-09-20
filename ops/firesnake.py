@@ -16,11 +16,11 @@ from ops.process import Align
 
 
 class Snake():
-	"""Container class for methods that act directly on data (names start with
-	underscore) and methods that act on arguments from snakemake (e.g., filenames
-	provided instead of image and table data). The snakemake methods (no underscore)
-	are automatically loaded by `Snake.load_methods`.
-	"""
+    """Container class for methods that act directly on data (names start with
+    underscore) and methods that act on arguments from snakemake (e.g., filenames
+    provided instead of image and table data). The snakemake methods (no underscore)
+    are automatically loaded by `Snake.load_methods`.
+    """
 
     @staticmethod
     def _align_SBS(data, method='DAPI', upsample_factor=2, window=4):
@@ -59,7 +59,7 @@ class Snake():
         """Align the second image to the first, using the channel at position 
         `channel_index`. The first channel is usually DAPI.
         """
-       	images = data_1[channel_index], data_2[channel_index]
+        images = data_1[channel_index], data_2[channel_index]
         _, offset = ops.process.Align.calculate_offsets(images)
         offsets = [offset] * len(data_2)
         aligned = ops.process.Align.apply_offsets(data_2, offsets)
@@ -134,9 +134,9 @@ class Snake():
     
     @staticmethod
     def _find_peaks(data, remove_index=None, data_index=None):
-    	"""Find local maxima and label by difference to next-highest neighboring
-    	pixel.
-    	"""
+        """Find local maxima and label by difference to next-highest neighboring
+        pixel.
+        """
         if remove_index is not None:
             data = remove_channels(data, remove_index)
 
@@ -154,8 +154,8 @@ class Snake():
 
     @staticmethod
     def _max_filter(data, width, remove_index=None):
-    	"""Apply a maximum filter in a window of `width`.
-    	"""
+        """Apply a maximum filter in a window of `width`.
+        """
         import scipy.ndimage.filters
 
         if data.ndim == 3:
@@ -170,9 +170,9 @@ class Snake():
 
     @staticmethod
     def _extract_bases(maxed, peaks, cells, threshold_peaks, wildcards, bases='GTAC'):
-        """Find the signal intensity from `maxed` at each non-zero point in `peaks`. Output
-        is labeled by `wildcards` (typically well and tile) and label at that position in
-        integer mask `cells`.
+        """Find the signal intensity from `maxed` at each point in `peaks` above 
+        `threshold_peaks`. Output is labeled by `wildcards` (typically well and tile) and 
+        label at that position in integer mask `cells`.
         """
 
         if maxed.ndim == 3:
@@ -197,7 +197,7 @@ class Snake():
         return df_bases
 
     @staticmethod
-    def _call_reads(df_bases, correction_only_in_cells):
+    def _call_reads(df_bases, correction_only_in_cells=True):
         """Median correction performed independently for each tile.
         Use the `correction_only_in_cells` flag to specify if correction
         is based on reads within cells, or all reads.
@@ -207,8 +207,8 @@ class Snake():
         
         cycles = len(set(df_bases['cycle']))
         return (df_bases
-            .pipe(ops.in_situ.clean_up_bases, correction_only_in_cells=correction_only_in_cells)
-            .pipe(ops.in_situ.do_median_call, cycles)
+            .pipe(ops.in_situ.clean_up_bases)
+            .pipe(ops.in_situ.do_median_call, cycles, correction_only_in_cells=correction_only_in_cells)
             )
 
     @staticmethod
@@ -328,8 +328,8 @@ def call_from_snakemake(f):
 
 
 def remove_channels(data, remove_index):
-	"""Remove channel or list of channels from array of shape (..., CHANNELS, I, J).
-	"""
+    """Remove channel or list of channels from array of shape (..., CHANNELS, I, J).
+    """
     channels_mask = np.ones(data.shape[-3], dtype=bool)
     channels_mask[remove_index] = False
     data = data[..., channels_mask, :, :]
@@ -369,12 +369,12 @@ def save_output(filename, data, **kwargs):
             pass
         return
     
-    if f.endswith('.tif'):
-        return save_tif(f, x, **kwargs)
-    elif f.endswith('.pkl'):
-        return save_pkl(f, x)
-    elif f.endswith('.csv'):
-        return save_csv(f, x)
+    if filename.endswith('.tif'):
+        return save_tif(filename, data, **kwargs)
+    elif filename.endswith('.pkl'):
+        return save_pkl(filename, data)
+    elif filename.endswith('.csv'):
+        return save_csv(filename, data)
     else:
         raise ValueError('not a recognized filetype: ' + f)
 
@@ -384,41 +384,41 @@ def load_well_tile_list(filename):
     return wells, tiles
 
 
-def load_csv(f):
-    with open(f, 'r') as fh:
+def load_csv(filename):
+    with open(filename, 'r') as fh:
         txt = fh.readline()
     sep = ',' if ',' in txt else '\s+'
-    return pd.read_csv(f, sep=sep)
+    return pd.read_csv(filename, sep=sep)
 
 
-def load_pkl(f):
-    return pd.read_pickle(f)
+def load_pkl(filename):
+    return pd.read_pickle(filename)
 
 
-def load_tif(f):
-    return ops.io.read_stack(f)
+def load_tif(filename):
+    return ops.io.read_stack(filename)
 
 
-def save_csv(f, df):
-    df.to_csv(f, index=None)
+def save_csv(filename, df):
+    df.to_csv(filename, index=None)
 
 
-def save_pkl(f, df):
-    df.to_pickle(f)
+def save_pkl(filename, df):
+    df.to_pickle(filename)
 
 
-def save_tif(f, data_, **kwargs):
+def save_tif(filename, data_, **kwargs):
     kwargs, _ = restrict_kwargs(kwargs, ops.io.save_stack)
     # make sure `data` doesn't come from the Snake method since it's an
     # argument name for the save function, too
     kwargs['data'] = data_
-    ops.io.save_stack(f, **kwargs)
+    ops.io.save_stack(filename, **kwargs)
 
 
 def restrict_kwargs(kwargs, f):
-	"""Partition `kwargs` into two dictionaries based on overlap with default 
-	arguments of function `f`.
-	"""
+    """Partition `kwargs` into two dictionaries based on overlap with default 
+    arguments of function `f`.
+    """
     f_kwargs = set(get_kwarg_defaults(f).keys()) | set(get_arg_names(f))
     keep, discard = {}, {}
     for key in kwargs.keys():
@@ -429,27 +429,27 @@ def restrict_kwargs(kwargs, f):
     return keep, discard
 
 
-def load_file(f):
-	"""Attempt to load file, raising an error if the file is not found or 
-	the file extension is not recognized.
-	"""
-    if not isinstance(f, str):
+def load_file(filename):
+    """Attempt to load file, raising an error if the file is not found or 
+    the file extension is not recognized.
+    """
+    if not isinstance(filename, str):
         raise TypeError
-    if not os.path.isfile(f):
-        raise IOError(2, 'Not a file: {0}'.format(f))
-    if f.endswith('.tif'):
-        return load_tif(f)
-    elif f.endswith('.pkl'):
-        return load_pkl(f)
-    elif f.endswith('.csv'):
-        return load_csv(f)
+    if not os.path.isfile(filename):
+        raise IOError(2, 'Not a file: {0}'.format(filename))
+    if filename.endswith('.tif'):
+        return load_tif(filename)
+    elif filename.endswith('.pkl'):
+        return load_pkl(filename)
+    elif filename.endswith('.csv'):
+        return load_csv(filename)
     else:
-        raise IOError(f)
+        raise IOError(filename)
 
 
 def get_arg_names(f):
-	"""List of regular and keyword argument names from function definition.
-	"""
+    """List of regular and keyword argument names from function definition.
+    """
     argspec = inspect.getargspec(f)
     if argspec.defaults is None:
         return argspec.args
@@ -458,13 +458,13 @@ def get_arg_names(f):
 
 
 def get_kwarg_defaults(f):
-	"""Get the kwarg defaults as a dictionary.
-	"""
+    """Get the kwarg defaults as a dictionary.
+    """
     argspec = inspect.getargspec(f)
     if argspec.defaults is None:
         defaults = {}
     else:
-    	defaults = {k: v for k,v in zip(argspec.args[::-1], argspec.defaults[::-1])}
+        defaults = {k: v for k,v in zip(argspec.args[::-1], argspec.defaults[::-1])}
     return defaults
 
 

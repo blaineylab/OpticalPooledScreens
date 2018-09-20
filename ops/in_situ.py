@@ -229,3 +229,11 @@ def add_clusters(df_cells, neighbor_dist=50):
 
     df_cells[CLUSTER] = cluster_index
     return df_cells
+
+
+def index_singleton_clusters(clusters):
+    clusters = clusters.copy()
+    filt = clusters == -1
+    n = clusters.max()
+    clusters[filt] = range(n, n + len(filt))
+    return clusters

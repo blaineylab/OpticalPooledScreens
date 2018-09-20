@@ -5,7 +5,7 @@ import ops.io
 
 CYCLES = ['c{cycle}-SBS-{cycle}'.format(cycle=c) for c in range(1, 13)]
 
-THRESHOLD_STD = 300  # threshold for detecting reads
+THRESHOLD_READS = 300  # threshold for detecting reads
 THRESHOLD_DAPI = 1200  # threshold for segmenting nuclei
 THRESHOLD_CELL = 800  # threshold for segmenting cells
 NUCLEUS_AREA = 0.25*150, 0.25*800
@@ -33,7 +33,7 @@ rule align:
     output:
         'process/10X_{well}_Tile-{tile}.aligned.tif'
     run:
-        Snake.align(output=output, data=input, 
+        Snake.align_SBS(output=output, data=input, 
             display_ranges=DISPLAY_RANGES, luts=LUTS)
 
 rule transform_LoG:
@@ -103,7 +103,7 @@ rule extract_bases:
         'process/10X_{well}_Tile-{tile}.bases.csv'
     run:
         Snake.extract_bases(output=output, peaks=input[0], maxed=input[1], 
-            cells=input[2], threshold_std=THRESHOLD_STD, wildcards=dict(wildcards)) 
+            cells=input[2], threshold_peaks=THRESHOLD_READS, wildcards=dict(wildcards)) 
 
 rule call_reads:
     input:

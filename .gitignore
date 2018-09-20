@@ -7,6 +7,8 @@ venv/
 ops_lasagna.egg-info/
 *.pyc
 
+notebooks/
+
 !example_data/
 example_data/*
 !example_data/input/
