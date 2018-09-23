@@ -1,5 +1,6 @@
 import functools
 
+from string import Formatter
 from itertools import product
 from decorator import decorator
 
@@ -115,6 +116,46 @@ def ndarray_to_dataframe(values, index):
     columns = pd.MultiIndex.from_product(levels, names=names)
     df = pd.DataFrame(values.reshape(values.shape[0], -1), columns=columns)
     return df
+
+
+def apply_string_format(df, format_string):
+    """Fills in a python string template from column names. Columns
+    are automatically cast to string using `.astype(str)`.
+    """
+    keys = [x[1] for x in Formatter().parse(format_string)]
+    result = []
+    for values in df[keys].astype(str).values:
+        d = dict(zip(keys, values))
+        result.append(format_string.format(**d))
+    return result
+
+
+def uncategorize(df, as_codes=False):
+    """Pivot and concat are weird with categories.
+    """
+    for col in df.select_dtypes(include=['category']).columns:
+    	if as_codes:
+    		df[col] = df[col].cat.codes
+    	else:
+        	df[col] = np.asarray(df[col])
+    return df
+
+
+def natsort_values(df, columns):
+    from natsort import natsorted
+    data = df[columns].copy()
+    uncategorize(data, as_codes=True)
+    keys = [(val, i) for i, val in enumerate(data.values)]
+    index = [i for _, i in natsorted(keys)]
+    return df.iloc[index]
+
+def rank_by_order(df, groupby_columns):
+	"""Uses 1-based ranking, like `df.groupby(..).rank()`.
+	"""
+	return (df
+		.groupby(groupby_columns)
+	    .apply(lambda x: x.reset_index())
+	    .reset_index(level=1)['level_1'].pipe(lambda x: list(1 + x)))
 
 
 # NUMPY

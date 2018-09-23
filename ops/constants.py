@@ -23,13 +23,11 @@ SGRNA_DESIGN = 'sgRNA_design'
 DATASET = 'dataset'
 GENE_SYMBOL = 'gene_symbol'
 FILE = 'file'
+SGRNA = 'sgRNA'
+SGRNA_NAME = 'sgRNA_name'
 
 STIMULANT = 'stimulant'
 GENE_CLASS = 'gene_class'
-
-STANDARD_COLUMNS = {
-	'gene': GENE_SYMBOL
-}
 
 GLASBEY_INVERTED = """ 
 0  0  0
