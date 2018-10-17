@@ -14,6 +14,8 @@ class Memoized(object):
     If called later with the same arguments, the cached value is returned, and
     not re-evaluated.
     Numpy arrays are treated specially with `copy` kwarg.
+
+    Based on http://wiki.python.org/moin/PythonDecoratorLibrary#Memoize
     """
 
     def __init__(self, func):
@@ -134,10 +136,10 @@ def uncategorize(df, as_codes=False):
     """Pivot and concat are weird with categories.
     """
     for col in df.select_dtypes(include=['category']).columns:
-    	if as_codes:
-    		df[col] = df[col].cat.codes
-    	else:
-        	df[col] = np.asarray(df[col])
+        if as_codes:
+            df[col] = df[col].cat.codes
+        else:
+            df[col] = np.asarray(df[col])
     return df
 
 
@@ -149,13 +151,22 @@ def natsort_values(df, columns):
     index = [i for _, i in natsorted(keys)]
     return df.iloc[index]
 
+
 def rank_by_order(df, groupby_columns):
-	"""Uses 1-based ranking, like `df.groupby(..).rank()`.
-	"""
-	return (df
-		.groupby(groupby_columns)
-	    .apply(lambda x: x.reset_index())
-	    .reset_index(level=1)['level_1'].pipe(lambda x: list(1 + x)))
+    """Uses 1-based ranking, like `df.groupby(..).rank()`.
+    """
+    return (df
+        .groupby(groupby_columns)
+        .apply(lambda x: x.reset_index())
+        .reset_index(level=1)['level_1'].pipe(lambda x: list(1 + x)))
+
+
+def flatten_cols(df, f='_'.join):
+    """Flatten column multi index.
+    """
+    df = df.copy()
+    df.columns = [f(x) for x in df.columns]
+    return df
 
 
 # NUMPY
@@ -168,7 +179,7 @@ def pile(arr):
     arr_out = []
     for x in arr:
         y = np.zeros(shape, x.dtype)
-        slicer = [slice(None, s) for s in x.shape]
+        slicer = tuple(slice(None, s) for s in x.shape)
         y[slicer] = x
         arr_out += [y[None, ...]]
 
@@ -181,7 +192,7 @@ def montage(arr, shape=None):
     pads with zero, no spacing
     if shape=(rows, columns) not provided, defaults to square, clipping last row if empty
     """
-    sz = zip(*[img.shape for img in arr])
+    sz = list(zip(*[img.shape for img in arr]))
     h, w, n = max(sz[-2]), max(sz[-1]), len(arr)
     if not shape:
         nr = nc = int(np.ceil(np.sqrt(n)))
@@ -195,7 +206,7 @@ def montage(arr, shape=None):
         s = [[None] for _ in img.shape]
         s[-2] = (r * h, r * h + img.shape[-2])
         s[-1] = (c * w, c * w + img.shape[-1])
-        M[[slice(*x) for x in s]] = img
+        M[tuple(slice(*x) for x in s)] = img
 
     return M
 

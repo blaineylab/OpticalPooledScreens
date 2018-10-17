@@ -27,7 +27,7 @@ DEFAULT_LUTS = GRAY, GREEN, RED, MAGENTA, CYAN, GRAY, GRAY
 
 
 def read_lut(lut_string):
-	return pd.read_csv(six.StringIO(lut_string), sep='\s+', header=None).values
+    return pd.read_csv(six.StringIO(lut_string), sep='\s+', header=None).values
 
 GLASBEY = read_lut(ops.constants.GLASBEY_INVERTED)
 
@@ -38,9 +38,13 @@ def grid_view(files, bounds, padding=40, with_mask=False):
     padding = int(padding)
 
     arr = []
+    Is = {}
     for filename, bounds_ in zip(files, bounds):
-        # some memory issue right now
-        I = read_stack(filename, memmap=False, copy=False) 
+        try:
+            I = Is[filename]
+        except KeyError:
+            I = read_stack(filename, copy=False) 
+            Is[filename] = I
         I_cell = ops.utils.subimage(I, bounds_, pad=padding)
         arr.append(I_cell.copy())
 
@@ -67,7 +71,7 @@ def read_stack(filename, copy=True):
         data = np.squeeze(data, axis=(0,))
 
     if copy:
-    	data = data.copy()
+        data = data.copy()
     return data
 
 
@@ -87,11 +91,11 @@ def save_stack(name, data, luts=None, display_ranges=None,
     >>> save('random_image', random_data, luts=luts, display_ranges=display_ranges)
 
     Compatible array data types are:
-    	bool (converted to uint8 0, 255)
-    	uint8 
-    	uint16 
-    	float32 
-    	float64 (converted to float32)
+        bool (converted to uint8 0, 255)
+        uint8 
+        uint16 
+        float32 
+        float64 (converted to float32)
     """
     
     if name.split('.')[-1] != 'tif':
