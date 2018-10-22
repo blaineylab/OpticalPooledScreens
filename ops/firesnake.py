@@ -205,6 +205,9 @@ class Snake():
         """
         if df_bases is None:
             return
+        if correction_only_in_cells:
+            if len(df_bases.query('cell > 0')) == 0:
+                return
         
         cycles = len(set(df_bases['cycle']))
         return (df_bases

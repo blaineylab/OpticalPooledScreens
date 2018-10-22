@@ -87,6 +87,7 @@ def call_cells(df_reads):
       .join(s['count'].sum() .rename(BARCODE_COUNT),             on=cols)
       .drop_duplicates(cols)
       .drop([BARCODE], axis=1) # drop the read barcode
+      .query('cell > 0') # remove reads not in a cell
     )
 
 
