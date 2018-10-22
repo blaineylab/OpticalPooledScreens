@@ -36,16 +36,16 @@ def plate_coordinate(well, tile, well_spacing, grid_spacing, grid_shape):
     `grid_shape` (# rows, # columns)  
     """
     tile = int(tile)
-    if well_spacing.lower() == '96w':
+    if well_spacing.upper() == '96W':
         well_spacing = 9000
-    if well_spacing.lower() == '24w':
+    elif well_spacing.upper() == '24W':
         well_spacing = 19300
-    if well_spacing.lower() == '6w':
+    elif well_spacing.upper() == '6W':
         well_spacing = 39120
         
-    if grid_spacing == '10X':
+    if grid_spacing.upper() == '10X':
         delta = 1280
-    elif grid_spacing == '20X':
+    elif grid_spacing.upper() == '20X':
         delta = 640
     else:
         delta = grid_spacing
