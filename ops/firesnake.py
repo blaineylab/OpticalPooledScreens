@@ -3,7 +3,8 @@ import functools
 import os
 import warnings
 
-warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings('ignore', message='numpy.dtype size changed')
+warnings.filterwarnings('ignore', message='regionprops and image moments')
 
 import numpy as np
 import pandas as pd
@@ -221,16 +222,16 @@ class Snake():
         return ops.in_situ.call_cells(df_reads)
 
     @staticmethod
-    def _extract_features(data, nuclei, wildcards, features=None):
+    def _extract_features(data, labels, wildcards, features=None):
         """Extracts features in dictionary and combines with generic region
         features.
         """
         from ops.process import feature_table
-        from ops.features import features_cell
+        from ops.features import features_basic
         features = features.copy() if features else dict()
-        features.update(features_cell)
+        features.update(features_basic)
 
-        df = feature_table(data, nuclei, features)
+        df = feature_table(data, labels, features)
 
         for k,v in sorted(wildcards.items()):
             df[k] = v
@@ -242,14 +243,16 @@ class Snake():
         """Features for frameshift reporter phenotyped in DAPI, HA channels.
         """
         from ops.features import features_frameshift
-        return Snake._extract_features(data_phenotype, nuclei, wildcards, features_frameshift)       
+        return (Snake._extract_features(data_phenotype, nuclei, wildcards, features_frameshift)
+        	 .rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _extract_phenotype_FR_myc(data_phenotype, nuclei, data_sbs_1, wildcards):
         """Features for frameshift reporter phenotyped in DAPI, HA, myc channels.
         """
         from ops.features import features_frameshift_myc
-        return Snake._extract_features(data_phenotype, nuclei, wildcards, features_frameshift_myc)     
+        return (Snake._extract_features(data_phenotype, nuclei, wildcards, features_frameshift_myc)
+            .rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _extract_phenotype_translocation(data_phenotype, nuclei, cells, wildcards):
@@ -265,12 +268,12 @@ class Snake():
         df_c =  Snake._extract_features(data_phenotype, cells, wildcards, features_c) 
 
         # inner join discards nuclei without corresponding cells
-        df = (pd.concat([df_n.set_index('cell'), df_c.set_index('cell')], axis=1, join='inner')
+        df = (pd.concat([df_n.set_index('label'), df_c.set_index('label')], axis=1, join='inner')
                 .reset_index())
 
         df = df.loc[:, ~df.columns.duplicated()]
         
-        return df
+        return df.rename(columns={'label': 'cell'})
 
     @staticmethod
     def _extract_phenotype_translocation_ring(data_phenotype, nuclei, wildcards, width=3):
@@ -282,11 +285,13 @@ class Snake():
         inner_ring = nuclei.copy()
         inner_ring[inside > 0] = 0
 
-        return Snake._extract_phenotype_translocation(data_phenotype, inner_ring, perimeter, wildcards)
+        return (Snake._extract_phenotype_translocation(data_phenotype, inner_ring, perimeter, wildcards)
+        	.rename(columns={'label': 'cell'}))
 
     @staticmethod
-    def _extract_minimal_phenotype(data_phenotype, nuclei, wildcards):
-        return Snake._extract_features(data, nuclei, wildcards, dict())
+    def _extract_phenotype_minimal(data_phenotype, nuclei, wildcards):
+        return (Snake._extract_features(data_phenotype, nuclei, wildcards, dict())
+        	.rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _analyze_DO(DO_410, DO_415, cells, peaks, threshold_peaks, wildcards):
