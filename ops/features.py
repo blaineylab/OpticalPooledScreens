@@ -43,6 +43,8 @@ geometry = {
     'contour' : lambda r: ops.utils.binary_contours(r.image, fix=True, labeled=False)[0],
     'label'   : lambda r: r.label,
     'mask':     lambda r: ops.utils.Mask(r.image),
+    'eccentricity': lambda r: r.eccentricity,
+    'solidity': lambda r: r.solidity,
     }
 
 # DAPI, HA, myc
@@ -51,11 +53,12 @@ frameshift = {
     'dapi_myc_corr': lambda r: correlate_channels(r, 0, 2),
     'ha_median'    : lambda r: np.median(r.intensity_image_full[1]),
     'myc_median'   : lambda r: np.median(r.intensity_image_full[2]),
-    'cell'         : lambda r: r.label
+    'cell'         : lambda r: r.label,
     }
 
 translocation = {
     'dapi_gfp_corr' : lambda r: correlate_channels(r, 0, 1),
+    'dapi_mean'  : lambda r: masked(r, 0).mean(),
     'dapi_median': lambda r: np.median(masked(r, 0)),
     'gfp_median' : lambda r: np.median(masked(r, 1)),
     'gfp_mean'   : lambda r: masked(r, 1).mean(),
@@ -92,13 +95,21 @@ def make_feature_dict(feature_names):
 
 validate_features()
 
-features_translocation_nuclear = make_feature_dict(('dapi_gfp_corr', 'dapi_median', 'gfp_median', 
-    'gfp_mean', 'dapi_int', 'gfp_int', 'dapi_max', 'gfp_max', 'area'))
+features_basic = make_feature_dict(('area', 'i', 'j', 'label'))
 
-features_translocation_cell = make_feature_dict(('dapi_gfp_corr', 'gfp_median', 
-    'gfp_mean', 'dapi_int', 'gfp_int', 'dapi_max', 'gfp_max', 'area'))
+features_translocation_nuclear = make_feature_dict((
+	'dapi_gfp_corr', 
+	'eccentricity', 'solidity',
+	'dapi_median', 'dapi_mean', 'dapi_int', 'dapi_max',
+	'gfp_median',  'gfp_mean',  'gfp_int',  'gfp_max',
+    'area'))
 
-features_cell = make_feature_dict(('area', 'i', 'j', 'bounds', 'cell'))
+features_translocation_cell = make_feature_dict((	
+	'dapi_gfp_corr', 
+	'eccentricity', 'solidity',
+	'dapi_median', 'dapi_mean', 'dapi_int', 'dapi_max',
+	'gfp_median',  'gfp_mean',  'gfp_int',  'gfp_max',
+    'area'))
 
 features_frameshift = make_feature_dict((
     'dapi_ha_corr', 'dapi_myc_corr', 
