@@ -101,6 +101,7 @@ def name_file(description, **more_description):
     filename = os.path.join(optional('home'), optional('dataset'), optional('subdir'), basename)
     return os.path.normpath(filename)
 
+
 def guess_filename(row, tag, **override_fields):
     description = {'subdir': 'process', 'mag': '10X', 
                     'tag': tag, 'ext': 'tif'}
@@ -108,3 +109,12 @@ def guess_filename(row, tag, **override_fields):
     description.update(override_fields)
     return name_file(description)
 
+
+def make_file_name(df, base_description, **kwargs):
+    d = base_description.copy()
+    arr = []
+    for _, row in df.iterrows():
+        d.update(row.to_dict())
+        d.update(kwargs)
+        arr.append(name_file(d))
+    return arr
