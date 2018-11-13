@@ -12,7 +12,7 @@ FILE_PATTERN = [
         r'(?P<well>[A-H][0-9]*)',
         r'(?:[_-]Site[_-](?P<site>([0-9]+)))?',
         r'(?:_Tile-(?P<tile>([0-9]+)))?',
-        r'(?:\.(?P<tag>.*))*\.(?P<ext>tif|pkl|csv|fastq)']
+        r'(?:\.(?P<tag>.*))*\.(?P<ext>.*)']
 
 folder_pattern = [
         r'(?P<mag>[0-9]+X).',
@@ -110,7 +110,7 @@ def guess_filename(row, tag, **override_fields):
     return name_file(description)
 
 
-def make_file_name(df, base_description, **kwargs):
+def make_filename(df, base_description, **kwargs):
     d = base_description.copy()
     arr = []
     for _, row in df.iterrows():
@@ -118,3 +118,19 @@ def make_file_name(df, base_description, **kwargs):
         d.update(kwargs)
         arr.append(name_file(d))
     return arr
+
+
+def make_filename_pipe(df, output_col, template_or_description=None, **kwargs):
+
+    try:
+        description = parse_filename(template_or_description)
+    except TypeError:
+        description = template_or_description.copy()
+
+    arr = []
+    for _, row in df.iterrows():
+        description.update(row.to_dict())
+        description.update(kwargs)
+        arr.append(name_file(description))
+
+    return df.assign(**{output_col: arr})
