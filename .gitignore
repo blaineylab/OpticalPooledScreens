@@ -8,6 +8,7 @@ ops_lasagna.egg-info/
 *.pyc
 
 notebooks/
+figures/
 
 !example_data/
 example_data/*
