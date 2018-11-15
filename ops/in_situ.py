@@ -88,6 +88,7 @@ def call_cells(df_reads):
       .drop_duplicates(cols)
       .drop([BARCODE], axis=1) # drop the read barcode
       .drop([POSITION_I, POSITION_J], axis=1) # drop the read coordinates
+      .query('cell > 0') # remove reads not in a cell
     )
 
 
