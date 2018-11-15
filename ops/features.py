@@ -112,20 +112,13 @@ features_translocation_cell = make_feature_dict((
     'area'))
 
 features_frameshift = make_feature_dict((
-    'dapi_ha_corr', 'dapi_myc_corr', 
-    'dapi_median', 'dapi_max', 
-    'ha_median', 'myc_median',
-    'cell'))
-
-features_frameshift_myc = make_feature_dict((
     'dapi_ha_corr', 
     'dapi_median', 'dapi_max', 
-    'ha_median', 
-    'cell'))
+    'ha_median'))
 
-features_FISH = make_feature_dict((
-    'cy3_median', 'cy5_median',
-    'cy3_int', 'cy5_int',
-    'dapi_median', 'dapi_max',
-    'area', 'cell'))
+features_frameshift_myc = make_feature_dict((
+    'dapi_ha_corr', 'dapi_myc_corr', 
+    'dapi_median', 'dapi_max', 
+    'ha_median', 'myc_median'))
+
 

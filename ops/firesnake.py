@@ -56,12 +56,12 @@ class Snake():
         return aligned
 
     @staticmethod
-    def _align_by_DAPI(data_1, data_2, channel_index=0):
+    def _align_by_DAPI(data_1, data_2, channel_index=0, upsample_factor=2):
         """Align the second image to the first, using the channel at position 
         `channel_index`. The first channel is usually DAPI.
         """
         images = data_1[channel_index], data_2[channel_index]
-        _, offset = ops.process.Align.calculate_offsets(images)
+        _, offset = ops.process.Align.calculate_offsets(images, upsample_factor=upsample_factor)
         offsets = [offset] * len(data_2)
         aligned = ops.process.Align.apply_offsets(data_2, offsets)
         return aligned
@@ -205,6 +205,9 @@ class Snake():
         """
         if df_bases is None:
             return
+        if correction_only_in_cells:
+            if len(df_bases.query('cell > 0')) == 0:
+                return
         
         cycles = len(set(df_bases['cycle']))
         return (df_bases
@@ -251,8 +254,8 @@ class Snake():
         """Features for frameshift reporter phenotyped in DAPI, HA, myc channels.
         """
         from ops.features import features_frameshift_myc
-        return (Snake._extract_features(data_phenotype, nuclei, wildcards, features)
-        	.rename(columns={'label': 'cell'}))
+        return (Snake._extract_features(data_phenotype, nuclei, wildcards, features_frameshift_myc)
+            .rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _extract_phenotype_translocation(data_phenotype, nuclei, cells, wildcards):
@@ -294,6 +297,17 @@ class Snake():
     def _extract_phenotype_minimal(data_phenotype, nuclei, wildcards):
         return (Snake._extract_features(data_phenotype, nuclei, wildcards, dict())
         	.rename(columns={'label': 'cell'}))
+
+    @staticmethod
+    def _analyze_DO(DO_410, DO_415, cells, peaks, threshold_peaks, wildcards):
+        data = np.array([DO_410, DO_415])
+        aligned = ops.process.Align.align_between_cycles(data, 0, window=2)
+        aligned = np.array([aligned[0, 0], aligned[0, 1], aligned[1, 1]])
+        loged = Snake._transform_log(aligned, skip_index=0)
+        maxed = Snake._max_filter(loged, width=3, remove_index=0)
+        return Snake._extract_bases(maxed, peaks, cells, 
+            bases=['410', '415'],
+            threshold_peaks=threshold_peaks, wildcards=wildcards)
 
     @staticmethod
     def add_method(class_, name, f):
@@ -387,7 +401,10 @@ def save_output(filename, data, **kwargs):
 
 
 def load_well_tile_list(filename):
-    wells, tiles = pd.read_pickle(filename)[['well', 'tile']].values.T
+    if filename.endswith('pkl'):
+        wells, tiles = pd.read_pickle(filename)[['well', 'tile']].values.T
+    elif filename.endswith('csv'):
+        wells, tiles = pd.read_csv(filename)[['well', 'tile']].values.T
     return wells, tiles
 
 
