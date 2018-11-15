@@ -106,7 +106,7 @@ def log_ndi(data, sigma=1, *args, **kwargs):
     f = scipy.ndimage.filters.gaussian_laplace
     arr_ = -1 * f(data.astype(float), sigma, *args, **kwargs)
     arr_[arr_ < 0] = 0
-    arr_ /= arr_.max()
+    arr_ /= 65535
     
     # skimage precision warning 
     with warnings.catch_warnings():
@@ -174,9 +174,10 @@ class Align:
 
     @staticmethod
     def apply_window(data, window):
+        height, width = data.shape[-2:]
         find_border = lambda x: int((x/2.) * (1 - 1/float(window)))
-        i, j = find_border(data.shape[-2]), find_border(data.shape[-1])
-        return data[..., i:-i, j:-j]
+        i, j = find_border(height), find_border(width)
+        return data[..., i:height - i, j:width - j]
 
 
 # SEGMENT
