@@ -169,6 +169,15 @@ def flatten_cols(df, f='_'.join):
     return df
 
 
+def vpipe(df, f, *args, **kwargs):
+    """Pipe through a function that accepts and returns a 2D array.
+
+    `df.pipe(vpipe, sklearn.preprocessing.scale)`
+    """
+    return pd.DataFrame(f(df.values, *args, **kwargs), 
+                 columns=df.columns, index=df.index)
+
+
 # NUMPY
 def pile(arr):
     """Concatenate stacks of same dimensionality along leading dimension. Values are

@@ -274,9 +274,11 @@ class Snake():
         df = (pd.concat([df_n.set_index('label'), df_c.set_index('label')], axis=1, join='inner')
                 .reset_index())
 
-        df = df.loc[:, ~df.columns.duplicated()]
-        
-        return df.rename(columns={'label': 'cell'})
+        return (df
+        	# area is redundant
+        	.rename(columns={'label': 'cell', 'area': 'area_nuclear'})
+        	.loc[:, ~df.columns.duplicated()])
+
 
     @staticmethod
     def _extract_phenotype_translocation_ring(data_phenotype, nuclei, wildcards, width=3):
