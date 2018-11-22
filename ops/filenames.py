@@ -68,34 +68,39 @@ def name_file(description, **more_description):
     Can override dictionary with keyword arguments.
     """
     d = dict(description)
-
-    for k, v in more_description.items():
-        if v is None and k in d:
-            d.pop(k)
-        else:
-            d[k] = v
-
+    d.update(more_description)
+    # if value is None, key is removed
     d = {k: v for k,v in d.items() if v is not None}
 
-    assert 'tag' in d
-
     if 'cycle' in d:
-        a = '%s_%s_%s' % (d['mag'], d['cycle'], d['well'])
+        d['first'] = '{mag}_{cycle}_{well}'.format(**d)
     else:
-        a = '%s_%s' % (d['mag'], d['well'])
+        d['first'] = '{mag}_{well}'.format(**d)
 
-    # only one
+    # positions can be called either tile or site (e.g., tiles are in physical order
+    # and sites are in acquisition order)
     if 'tile' in d:
-        b = 'Tile-%s' % d['tile']
+        d['pos'] = 'Tile-{0}'.format(d['tile'])
     elif 'site' in d:
-        b = 'Site-%s' % d['site']
+        d['pos'] = 'Site-{0}'.format(d['site'])
     else:
-        b = None
+        d['pos'] = None
 
-    if b:
-        basename = '%s_%s.%s.%s' % (a, b, d['tag'], d['ext'])
+    formats = [
+        '{first}_{pos}.{tag}.{ext}',
+        '{first}_{pos}.{ext}',
+        '{first}.{tag}.{ext}',
+        '{first}.{ext}',
+    ]
+
+    for fmt in formats:
+        try:
+            basename = fmt.format(**d)
+            break
+        except KeyError:
+            continue
     else:
-        basename = '%s.%s.%s' % (a, d['tag'], d['ext'])
+        raise ValueError('extension missing')
     
     optional = lambda x: d.get(x, '')
     filename = os.path.join(optional('home'), optional('dataset'), optional('subdir'), basename)
@@ -110,7 +115,7 @@ def guess_filename(row, tag, **override_fields):
     return name_file(description)
 
 
-def make_file_name(df, base_description, **kwargs):
+def make_filename(df, base_description, **kwargs):
     d = base_description.copy()
     arr = []
     for _, row in df.iterrows():
