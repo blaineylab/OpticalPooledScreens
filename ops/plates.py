@@ -1,5 +1,7 @@
 import string
+import re
 import numpy as np
+import pandas as pd
 
 
 def add_global_xy(df, well_spacing, grid_shape, grid_spacing='10X', factor=1.):
@@ -78,3 +80,29 @@ def remap_snake(site, grid_shape):
     site_ = grid.flat[int(site)]
     return '%d' % site_
 
+
+def filter_micromanager_positions(filename, well_site_list):
+    """Restrict micromanager position list to given wells and sites.
+    """
+    import json
+    if isinstance(well_site_list, pd.DataFrame):
+        well_site_list = zip(well_site_list['well'], well_site_list['site'])
+
+    well_site_list = set((str(w), str(s)) for w,s in well_site_list)
+    def filter_well_site(position):
+        pat = '(.\d+)-Site_(\d+)'
+        return re.findall(pat, position['LABEL'])[0] in well_site_list
+    
+    with open(filename, 'r') as fh:
+        d = json.load(fh)
+        print ('read %d positions from %s' % (len(d['POSITIONS']), filename))
+    
+    d['POSITIONS'] = list(filter(filter_well_site, d['POSITIONS']))
+    
+    import datetime
+    timestamp = '{date:%Y%m%d_%I.%M%p}'.format( date=datetime.datetime.now() )
+    filename2 = '%s.%s.filtered.pos' % (filename, timestamp)
+    with open(filename2, 'w') as fh:
+        json.dump(d, fh)
+        print( '...')
+        print ('wrote %d positions to %s' % (len(d['POSITIONS']), filename2))
