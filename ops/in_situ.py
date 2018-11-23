@@ -238,4 +238,18 @@ def index_singleton_clusters(clusters):
     filt = clusters == -1
     n = clusters.max()
     clusters[filt] = range(n, n + len(filt))
-    return clusters
+    return clustersdef groupby_apply2(df_1, df_2, cols, f):
+	"""Apply a function `f` that takes two dataframes and returns a dataframe.
+	Groups inputs by `cols`, evaluates for each group, and concatenates the result.
+
+	"""
+	from tqdm import tqdm_notebook as tqdn
+
+	d_1 = {k: v for k,v in df_1.groupby(cols)}
+	d_2    = {k: v for k,v in df_2.groupby(cols)}
+
+	arr = []
+	for k in tqdn(d_1):
+	    arr.append(f(d_1[k], d_2[k]))
+	
+	return pd.concat(arr)    
