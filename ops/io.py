@@ -27,7 +27,8 @@ DEFAULT_LUTS = GRAY, GREEN, RED, MAGENTA, CYAN, GRAY, GRAY
 
 
 def read_lut(lut_string):
-    return pd.read_csv(six.StringIO(lut_string), sep='\s+', header=None).values
+    return (pd.read_csv(six.StringIO(lut_string), sep='\s+', header=None)
+    	.values.T.flatten())
 
 GLASBEY = read_lut(ops.constants.GLASBEY_INVERTED)
 
