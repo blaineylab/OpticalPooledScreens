@@ -105,8 +105,7 @@ def log_ndi(data, sigma=1, *args, **kwargs):
     """
     f = scipy.ndimage.filters.gaussian_laplace
     arr_ = -1 * f(data.astype(float), sigma, *args, **kwargs)
-    arr_[arr_ < 0] = 0
-    arr_ /= 65535
+    arr_ = np.clip(arr_, 0, 65535) / 65535
     
     # skimage precision warning 
     with warnings.catch_warnings():
