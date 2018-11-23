@@ -73,6 +73,8 @@ viewRNA = {
     'cy5_median': lambda r: np.median(masked(r, 2)),
     'cy3_int': lambda r: masked(r, 1).sum(),
     'cy5_int': lambda r: masked(r, 2).sum(),
+    'cy5_mean': lambda r: masked(r, 2).sum(),
+    'cy5_max': lambda r: masked(r, 2).max(),
 }
 
 all_features = [
