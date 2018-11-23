@@ -76,6 +76,8 @@ class Snake():
             dapi = data[0]
         elif data.ndim == 3:
             dapi = data[0]
+        else:
+            dapi = data
 
         kwargs = dict(threshold=lambda x: threshold, 
             area_min=area_min, area_max=area_max)
@@ -134,15 +136,12 @@ class Snake():
         return consensus
     
     @staticmethod
-    def _find_peaks(data, remove_index=None, data_index=None):
+    def _find_peaks(data, remove_index=None):
         """Find local maxima and label by difference to next-highest neighboring
         pixel.
         """
         if remove_index is not None:
             data = remove_channels(data, remove_index)
-
-        if data_index is not None:
-            data = data[data_index]
 
         if data.ndim == 2:
             data = [data]
@@ -247,7 +246,7 @@ class Snake():
         """
         from ops.features import features_frameshift
         return (Snake._extract_features(data_phenotype, nuclei, wildcards, features_frameshift)
-        	 .rename(columns={'label': 'cell'}))
+             .rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _extract_phenotype_FR_myc(data_phenotype, nuclei, data_sbs_1, wildcards):
@@ -275,9 +274,9 @@ class Snake():
                 .reset_index())
 
         return (df
-        	# area is redundant
-        	.rename(columns={'label': 'cell', 'area': 'area_nuclear'})
-        	.loc[:, ~df.columns.duplicated()])
+            # area is redundant
+            .rename(columns={'label': 'cell', 'area': 'area_nuclear'})
+            .loc[:, ~df.columns.duplicated()])
 
 
     @staticmethod
@@ -291,12 +290,12 @@ class Snake():
         inner_ring[inside > 0] = 0
 
         return (Snake._extract_phenotype_translocation(data_phenotype, inner_ring, perimeter, wildcards)
-        	.rename(columns={'label': 'cell'}))
+            .rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _extract_phenotype_minimal(data_phenotype, nuclei, wildcards):
         return (Snake._extract_features(data_phenotype, nuclei, wildcards, dict())
-        	.rename(columns={'label': 'cell'}))
+            .rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _analyze_DO(DO_410, DO_415, cells, peaks, threshold_peaks, wildcards):
@@ -319,33 +318,36 @@ class Snake():
         methods = inspect.getmembers(Snake)
         for name, f in methods:
             if name not in ('__doc__', '__module__') and name.startswith('_'):
-                Snake.add_method('Snake', name[1:], call_from_snakemake(f))
+                Snake.add_method('Snake', name[1:], Snake.call_from_snakemake(f))
+
+    @staticmethod
+    def call_from_snakemake(f):
+        """Turn a function that acts on a mix of image data, table data and other 
+        arguments and may return image or table data into a function that acts on 
+        filenames for image and table data, plus other arguments.
+
+        If output filename is provided, saves return value of function.
+
+        Supported input and output filetypes are .pkl, .csv, and .tif.
+        """
+        def g(**kwargs):
+
+            # split keyword arguments into input (needed for function)
+            # and output (needed to save result)
+            input_kwargs, output_kwargs = restrict_kwargs(kwargs, f)
+
+            # load arguments provided as filenames
+            input_kwargs = {k: load_arg(v) for k,v in input_kwargs.items()}
+
+            result = f(**input_kwargs)
+
+            if 'output' in output_kwargs:
+                save_output(output_kwargs['output'], result, **output_kwargs)
+
+        return functools.update_wrapper(g, f)
 
 
-def call_from_snakemake(f):
-    """Turn a function that acts on a mix of image data, table data and other 
-    arguments and may return image or table data into a function that acts on 
-    filenames for image and table data, plus other arguments.
-
-    If output filename is provided, saves return value of function.
-
-    Supported input and output filetypes are .pkl, .csv, and .tif.
-    """
-    def g(**kwargs):
-
-        # split keyword arguments into input (needed for function)
-        # and output (needed to save result)
-        input_kwargs, output_kwargs = restrict_kwargs(kwargs, f)
-
-        # load arguments provided as filenames
-        input_kwargs = {k: load_arg(v) for k,v in input_kwargs.items()}
-
-        result = f(**input_kwargs)
-
-        if 'output' in output_kwargs:
-            save_output(output_kwargs['output'], result, **output_kwargs)
-
-    return functools.update_wrapper(g, f)
+Snake.load_methods()
 
 
 def remove_channels(data, remove_index):
@@ -357,9 +359,12 @@ def remove_channels(data, remove_index):
     return data
 
 
+# IO
+
+
 def load_arg(x):
-    """Try loading data from `x` if it is a string or list of strings.
-    If that fails just return `x`.
+    """Try loading data from `x` if it is a filename or list of filenames.
+    Otherwise just return `x`.
     """
     one_file = load_file
     many_files = lambda x: [load_file(f) for f in x]
@@ -400,23 +405,17 @@ def save_output(filename, data, **kwargs):
         raise ValueError('not a recognized filetype: ' + f)
 
 
-def load_well_tile_list(filename):
-    if filename.endswith('pkl'):
-        wells, tiles = pd.read_pickle(filename)[['well', 'tile']].values.T
-    elif filename.endswith('csv'):
-        wells, tiles = pd.read_csv(filename)[['well', 'tile']].values.T
-    return wells, tiles
-
-
 def load_csv(filename):
-    with open(filename, 'r') as fh:
-        txt = fh.readline()
-    sep = ',' if ',' in txt else '\s+'
-    return pd.read_csv(filename, sep=sep)
+    df = pd.read_csv(filename)
+    if len(df) == 0:
+        return None
+    return df
 
 
 def load_pkl(filename):
-    return pd.read_pickle(filename)
+    df = pd.read_pickle(filename)
+    if len(df) == 0:
+        return None
 
 
 def load_tif(filename):
@@ -433,8 +432,8 @@ def save_pkl(filename, df):
 
 def save_tif(filename, data_, **kwargs):
     kwargs, _ = restrict_kwargs(kwargs, ops.io.save_stack)
-    # make sure `data` doesn't come from the Snake method since it's an
-    # argument name for the save function, too
+    # `data` can be an argument name for both the Snake method and `save_stack`
+    # overwrite with `data_` 
     kwargs['data'] = data_
     ops.io.save_stack(filename, **kwargs)
 
@@ -492,4 +491,9 @@ def get_kwarg_defaults(f):
     return defaults
 
 
-Snake.load_methods()
+def load_well_tile_list(filename):
+    if filename.endswith('pkl'):
+        wells, tiles = pd.read_pickle(filename)[['well', 'tile']].values.T
+    elif filename.endswith('csv'):
+        wells, tiles = pd.read_csv(filename)[['well', 'tile']].values.T
+    return wells, tiles
