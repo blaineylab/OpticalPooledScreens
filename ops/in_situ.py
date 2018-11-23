@@ -22,7 +22,7 @@ def format_bases(values, labels, positions, cycles, bases):
     try:
         df = ops.utils.ndarray_to_dataframe(values, index)
     except ValueError:
-        print('failed to reshape peaks to sequencing bases, writing empty table')
+        print('failed to reshape extracted pixels to sequencing bases, writing empty table')
         return pd.DataFrame()
 
     df_positions = pd.DataFrame(positions, columns=[POSITION_I, POSITION_J])
@@ -238,7 +238,32 @@ def index_singleton_clusters(clusters):
     filt = clusters == -1
     n = clusters.max()
     clusters[filt] = range(n, n + len(filt))
-    return clustersdef groupby_apply2(df_1, df_2, cols, f):
+    return clusters
+
+
+def join_by_cell_location(df_cells, df_ph, max_distance=4):
+    from scipy.spatial.kdtree import KDTree
+    # df_cells = df_cells.sort_values(['well', 'tile', 'cell'])
+    # df_ph = df_ph.sort_values(['well', 'tile', 'cell'])
+    i_tree = df_ph['global_y']
+    j_tree = df_ph['global_x']
+    i_query = df_cells['global_y']
+    j_query = df_cells['global_x']
+    
+    kdt = KDTree(list(zip(i_tree, j_tree)))
+    distance, index = kdt.query(list(zip(i_query, j_query)))
+    cell_ph = df_ph.iloc[index]['cell'].pipe(list)
+    cols_left = ['well', 'tile', 'cell_ph']
+    cols_right = ['well', 'tile', 'cell']
+    cols_ph = [c for c in df_ph.columns if c not in df_cells.columns]
+    return (df_cells
+                .assign(cell_ph=cell_ph, distance=distance)
+                .query('distance < @max_distance')
+                .join(df_ph.set_index(cols_right)[cols_ph], on=cols_left)
+                # .drop(['cell_ph'], axis=1)
+               )
+
+def groupby_apply2(df_1, df_2, cols, f):
 	"""Apply a function `f` that takes two dataframes and returns a dataframe.
 	Groups inputs by `cols`, evaluates for each group, and concatenates the result.
 
