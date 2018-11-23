@@ -95,21 +95,25 @@ def groupby_reduce_concat(gb, *args, **kwargs):
 
 
 def groupby_histogram(df, index, column, bins, cumulative=False):
-    """Substitute for df.groupby(index)[column].histogram(bins),
+    """Substitute for df.groupby(index)[column].value_counts(),
     only supports one column label.
+
+    TODO: switch to value counts (fill in missing), option to return long or wide
     """
     maybe_cumsum = lambda x: x.cumsum(axis=1) if cumulative else x
     column_bin = column + '_bin'
     column_count = column + ('_csum' if cumulative else '_count')
+    bins = np.array(bins)
     return (df
+        .assign(dummy=1)
         .assign(**{column_bin: bins[np.digitize(df[column], bins) - 1]})
-        .pivot_table(index=index, columns=column_bin, values=df.columns[0], 
-                     aggfunc='count')
+        .pivot_table(index=index, columns=column_bin, values='dummy', 
+                     aggfunc='sum')
         .reindex(labels=list(bins), axis=1)
-        .fillna(0)
+        .fillna(0).astype(int)
         .pipe(maybe_cumsum)
         .stack().rename(column_count)
-        .astype(int).reset_index()
+        .reset_index()
            )
 
 
