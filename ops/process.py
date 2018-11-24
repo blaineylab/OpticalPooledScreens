@@ -135,7 +135,7 @@ class Align:
                 offset, _, _ = skimage.feature.register_translation(
                                 src, target, upsample_factor=upsample_factor)
                 offsets += [offset]
-        return offsets
+        return np.array(offsets)
 
     @staticmethod
     def apply_offsets(data_, offsets):
@@ -159,7 +159,8 @@ class Align:
         return Align.apply_offsets(data_, offsets)
 
     @staticmethod
-    def align_between_cycles(data, channel_index, upsample_factor=4, window=1):
+    def align_between_cycles(data, channel_index, upsample_factor=4, window=1,
+    		return_offsets=False):
         # offsets from target channel
         target = Align.apply_window(data[:, channel_index], window)
         offsets = Align.calculate_offsets(target, upsample_factor=upsample_factor)
@@ -169,7 +170,11 @@ class Align:
         for data_ in data.transpose([1, 0, 2, 3]):
             warped += [Align.apply_offsets(data_, offsets)]
 
-        return np.array(warped).transpose([1, 0, 2, 3])
+        aligned = np.array(warped).transpose([1, 0, 2, 3])
+        if return_offsets:
+        	return aligned, offsets
+        else:
+        	return aligned
 
     @staticmethod
     def apply_window(data, window):
