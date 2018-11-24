@@ -5,6 +5,8 @@ import warnings
 
 warnings.filterwarnings('ignore', message='numpy.dtype size changed')
 warnings.filterwarnings('ignore', message='regionprops and image moments')
+warnings.filterwarnings('ignore', message='non-tuple sequence for multi')
+warnings.filterwarnings('ignore', message='precision loss when converting')
 
 import numpy as np
 import pandas as pd
@@ -278,6 +280,21 @@ class Snake():
             .rename(columns={'label': 'cell', 'area': 'area_nuclear'})
             .loc[:, ~df.columns.duplicated()])
 
+    @staticmethod
+    def _extract_phenotype_translocation_live(data, nuclei, wildcards):
+        def _extract_phenotype_translocation_simple(data, nuclei, wildcards):
+            import ops.features
+            features = ops.features.features_translocation_nuclear_simple
+            
+            return (Snake._extract_features(data, nuclei, wildcards, features)
+                .rename(columns={'label': 'cell'}))
+
+        extract = _extract_phenotype_translocation_simple
+        arr = []
+        for i, (frame, nuclei_frame) in enumerate(zip(data, nuclei)):
+            arr += [extract(frame, nuclei_frame, {'frame': i})]
+
+        return pd.concat(arr)
 
     @staticmethod
     def _extract_phenotype_translocation_ring(data_phenotype, nuclei, wildcards, width=3):
@@ -307,6 +324,46 @@ class Snake():
         return Snake._extract_bases(maxed, peaks, cells, 
             bases=['410', '415'],
             threshold_peaks=threshold_peaks, wildcards=wildcards)
+
+    @staticmethod
+    def _track_live_nuclei(data, threshold=800, area_lim=(100, 500), 
+        radius=50, tolerance_per_frame=5):
+        
+        import ops.timelapse
+        data = np.squeeze(data)
+
+        # segment nuclei
+        arr = []
+        for dapi in data[:, 0]:
+            arr += [ops.process.find_nuclei(dapi, 
+                            threshold=lambda x: threshold, 
+                            radius=radius, area_min=area_lim[0],
+                            area_max=area_lim[1])]
+        nuclei = np.array(arr)
+
+        # return nuclei
+
+        # nuclei coordinates
+        arr = []
+        for i, (frame, nuclei_frame) in enumerate(zip(data, nuclei)):
+            extract = Snake._extract_phenotype_minimal
+            arr += [extract(frame, nuclei_frame, {'frame': i})]
+        df_nuclei = pd.concat(arr)
+
+        # track nuclei
+        motion_threshold = len(data) * tolerance_per_frame
+        G = (df_nuclei
+          .rename(columns={'cell': 'label'})
+          .pipe(ops.timelapse.initialize_graph)
+        )
+
+        cost, path = ops.timelapse.analyze_graph(G)
+        relabel = ops.timelapse.filter_paths(cost, path, 
+                                    threshold=motion_threshold)
+        nuclei_tracked = ops.timelapse.relabel_nuclei(nuclei, relabel)
+
+        return nuclei_tracked
+
 
     @staticmethod
     def add_method(class_, name, f):

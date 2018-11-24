@@ -123,4 +123,7 @@ features_frameshift_myc = make_feature_dict((
     'dapi_median', 'dapi_max', 
     'ha_median', 'myc_median'))
 
-
+features_translocation_nuclear_simple = make_feature_dict((
+	'dapi_gfp_corr', 
+	'dapi_mean', 'dapi_max', 'gfp_mean', 'gfp_max',
+    'area'))
