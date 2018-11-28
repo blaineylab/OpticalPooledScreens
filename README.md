@@ -25,7 +25,7 @@ This creates a virtual environment called `venv` for project-specific resources.
 sh install.sh
 ```
 
-The `ops` package is installed with `pip install -e`, so the source code can be modified from the `ops/` directory without re-installing. The `ops` package is compatible with Python 2.7 as well as Python 3.6, however results may not be numerically identical.
+The `ops` package is installed with `pip install -e`, so the source code in the `ops/` directory can be modified in place. The package is compatible with  Python 2.7 and Python 3.6, however results may not be numerically identical.
 
 ## Running example code
 
