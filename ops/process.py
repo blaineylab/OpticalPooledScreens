@@ -152,8 +152,10 @@ class Align:
         return np.array(warped)
 
     @staticmethod
-    def align_within_cycle(data_, upsample_factor=4, window=1):
-        normed = Align.normalize_by_percentile(Align.apply_window(data_, window))
+    def align_within_cycle(data_, upsample_factor=4, window=1, q_norm=70, cutoff=None):
+        normed = Align.normalize_by_percentile(Align.apply_window(data_, window), q_norm=70)
+        if cutoff:
+        	normed[normed > cutoff] = cutoff
         offsets = Align.calculate_offsets(normed, upsample_factor=upsample_factor)
 
         return Align.apply_offsets(data_, offsets)

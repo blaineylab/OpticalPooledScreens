@@ -40,7 +40,14 @@ class Snake():
         # align between SBS channels for each cycle
         aligned = data.copy()
         align_it = lambda x: Align.align_within_cycle(x, window=window, upsample_factor=upsample_factor)
-        aligned[:, 1:] = np.array([align_it(x) for x in aligned[:, 1:]])
+        if data.shape[1] == 4:
+            n = 0
+            align_it = lambda x: Align.align_within_cycle(x, window=window, upsample_factor=upsample_factor, cutoff=1)
+        else:
+            n = 1
+        
+        aligned[:, n:] = np.array([align_it(x) for x in aligned[:, n:]])
+        
 
         if method == 'DAPI':
             # align cycles using the DAPI channel
@@ -217,13 +224,15 @@ class Snake():
             )
 
     @staticmethod
-    def _call_cells(df_reads):
+    def _call_cells(df_reads, q_min=0):
         """Median correction performed independently for each tile.
         """
         if df_reads is None:
             return
         
-        return ops.in_situ.call_cells(df_reads)
+        return (df_reads
+            .query('Q_min > @q_min')
+            .pipe(ops.in_situ.call_cells))
 
     @staticmethod
     def _extract_features(data, labels, wildcards, features=None):
