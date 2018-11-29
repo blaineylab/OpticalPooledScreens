@@ -26,7 +26,7 @@ class Snake():
     """
 
     @staticmethod
-    def _align_SBS(data, method='DAPI', upsample_factor=2, window=4):
+    def _align_SBS(data, method='DAPI', upsample_factor=2, window=4, cutoff=1):
         """Rigid alignment of sequencing cycles and channels. 
 
         Expects `data` to be an array with dimensions (CYCLE, CHANNEL, I, J).
@@ -42,7 +42,8 @@ class Snake():
         align_it = lambda x: Align.align_within_cycle(x, window=window, upsample_factor=upsample_factor)
         if data.shape[1] == 4:
             n = 0
-            align_it = lambda x: Align.align_within_cycle(x, window=window, upsample_factor=upsample_factor, cutoff=1)
+            align_it = lambda x: Align.align_within_cycle(x, window=window, 
+                upsample_factor=upsample_factor, cutoff=cutoff)
         else:
             n = 1
         
@@ -57,6 +58,7 @@ class Snake():
             # calculate cycle offsets using the average of SBS channels
             target = Align.apply_window(aligned[:, 1:], window=window).max(axis=1)
             normed = Align.normalize_by_percentile(target)
+            normed[normed > cutoff] = cutoff
             offsets = Align.calculate_offsets(normed, upsample_factor=upsample_factor)
             # apply cycle offsets to each channel
             for channel in range(aligned.shape[1]):
