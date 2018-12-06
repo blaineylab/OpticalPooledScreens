@@ -487,7 +487,9 @@ def load_pkl(filename):
 
 
 def load_tif(filename):
-    return ops.io.read_stack(filename)
+    x = ops.io.read_stack(filename)
+    ops.io.read_stack._reset()
+    return x
 
 
 def save_csv(filename, df):
