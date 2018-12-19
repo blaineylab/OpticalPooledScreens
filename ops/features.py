@@ -71,6 +71,7 @@ translocation = {
 viewRNA = {
     'cy3_median': lambda r: np.median(masked(r, 1)),
     'cy5_median': lambda r: np.median(masked(r, 2)),
+    'cy5_80p'   : lambda r: np.percentile(masked(r, 2), 80),
     'cy3_int': lambda r: masked(r, 1).sum(),
     'cy5_int': lambda r: masked(r, 2).sum(),
     'cy5_mean': lambda r: masked(r, 2).sum(),
