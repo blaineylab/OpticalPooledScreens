@@ -3020,7 +3020,7 @@ def imagej_metadata(data, bytecounts, byteorder):
 
     def read_bytes(data, byteorder):
         #return struct.unpack('b' * len(data), data)
-        return numpy.fromstring(data, 'uint8')
+        return numpy.frombuffer(data, 'uint8')
 
     metadata_types = {  # big endian
         b'info': ('info', read_string),
