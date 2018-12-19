@@ -112,7 +112,6 @@ def save_stack(name, data, luts=None, display_ranges=None,
     if (data.dtype == np.int64):
         if (data>=0).all() and (data<2**16).all():
             data = data.astype(np.uint16)
-            print('Cast int64 to int16 without loss')
         else:
             data = data.astype(np.float32)
             print('Cast int64 to float32')
