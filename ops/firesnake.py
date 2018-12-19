@@ -26,7 +26,8 @@ class Snake():
     """
 
     @staticmethod
-    def _align_SBS(data, method='DAPI', upsample_factor=2, window=4, cutoff=1):
+    def _align_SBS(data, method='DAPI', upsample_factor=2, window=4, cutoff=1,
+        align_within_cycle=True):
         """Rigid alignment of sequencing cycles and channels. 
 
         Expects `data` to be an array with dimensions (CYCLE, CHANNEL, I, J).
@@ -39,16 +40,17 @@ class Snake():
 
         # align between SBS channels for each cycle
         aligned = data.copy()
-        align_it = lambda x: Align.align_within_cycle(x, window=window, upsample_factor=upsample_factor)
-        if data.shape[1] == 4:
-            n = 0
-            align_it = lambda x: Align.align_within_cycle(x, window=window, 
-                upsample_factor=upsample_factor, cutoff=cutoff)
-        else:
-            n = 1
-        
-        aligned[:, n:] = np.array([align_it(x) for x in aligned[:, n:]])
-        
+        if align_within_cycle:
+            align_it = lambda x: Align.align_within_cycle(x, window=window, upsample_factor=upsample_factor)
+            if data.shape[1] == 4:
+                n = 0
+                align_it = lambda x: Align.align_within_cycle(x, window=window, 
+                    upsample_factor=upsample_factor, cutoff=cutoff)
+            else:
+                n = 1
+            
+            aligned[:, n:] = np.array([align_it(x) for x in aligned[:, n:]])
+            
 
         if method == 'DAPI':
             # align cycles using the DAPI channel
@@ -375,7 +377,6 @@ class Snake():
 
         return nuclei_tracked
 
-
     @staticmethod
     def add_method(class_, name, f):
         f = staticmethod(f)
@@ -407,10 +408,21 @@ class Snake():
             # load arguments provided as filenames
             input_kwargs = {k: load_arg(v) for k,v in input_kwargs.items()}
 
-            result = f(**input_kwargs)
+            results = f(**input_kwargs)
 
             if 'output' in output_kwargs:
-                save_output(output_kwargs['output'], result, **output_kwargs)
+            	outputs = output_kwargs['output']
+            	# determine if there are multiple outputs 
+            	if isinstance(outputs, str):
+            		outputs = [outputs]
+            		results = [results]
+
+            	if len(outputs) != len(results):
+            		error = '{0} output filenames provided for {1} results'
+            		raise ValueError(error.format(len(outputs), len(results)))
+
+            	for output, result in zip(outputs, results):
+                	save_output(output, result, **output_kwargs)
 
         return functools.update_wrapper(g, f)
 
@@ -462,7 +474,6 @@ def save_output(filename, data, **kwargs):
         with open(filename, 'w') as fh:
             pass
         return
-    
     if filename.endswith('.tif'):
         return save_tif(filename, data, **kwargs)
     elif filename.endswith('.pkl'):
