@@ -80,13 +80,15 @@ def call_cells(df_reads):
         )
 
     return (df_reads
-      .join(s.nth(0)[BARCODE].rename(BARCODE_0),                 on=cols)
-      .join(s.nth(0)['count'].rename(BARCODE_COUNT_0).fillna(0), on=cols)
-      .join(s.nth(1)[BARCODE].rename(BARCODE_1),                 on=cols)
-      .join(s.nth(1)['count'].rename(BARCODE_COUNT_1).fillna(0), on=cols)
-      .join(s['count'].sum() .rename(BARCODE_COUNT),             on=cols)
+      .join(s.nth(0)[BARCODE].rename(BARCODE_0),       on=cols)
+      .join(s.nth(0)['count'].rename(BARCODE_COUNT_0), on=cols)
+      .join(s.nth(1)[BARCODE].rename(BARCODE_1),       on=cols)
+      .join(s.nth(1)['count'].rename(BARCODE_COUNT_1), on=cols)
+      .join(s['count'].sum() .rename(BARCODE_COUNT),   on=cols)
+      .assign(**{BARCODE_COUNT_0: lambda x: x[BARCODE_COUNT_0].fillna(0),
+                 BARCODE_COUNT_1: lambda x: x[BARCODE_COUNT_1].fillna(0)})
       .drop_duplicates(cols)
-      .drop([BARCODE], axis=1) # drop the read barcode
+      .drop([READ, BARCODE], axis=1) # drop the read
       .drop([POSITION_I, POSITION_J], axis=1) # drop the read coordinates
       .query('cell > 0') # remove reads not in a cell
     )
@@ -263,18 +265,3 @@ def join_by_cell_location(df_cells, df_ph, max_distance=4):
                 # .drop(['cell_ph'], axis=1)
                )
 
-def groupby_apply2(df_1, df_2, cols, f):
-	"""Apply a function `f` that takes two dataframes and returns a dataframe.
-	Groups inputs by `cols`, evaluates for each group, and concatenates the result.
-
-	"""
-	from tqdm import tqdm_notebook as tqdn
-
-	d_1 = {k: v for k,v in df_1.groupby(cols)}
-	d_2    = {k: v for k,v in df_2.groupby(cols)}
-
-	arr = []
-	for k in tqdn(d_1):
-	    arr.append(f(d_1[k], d_2[k]))
-	
-	return pd.concat(arr)    

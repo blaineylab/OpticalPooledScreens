@@ -125,6 +125,23 @@ def groupby_histogram(df, index, column, bins, cumulative=False):
            )
 
 
+def groupby_apply2(df_1, df_2, cols, f):
+    """Apply a function `f` that takes two dataframes and returns a dataframe.
+    Groups inputs by `cols`, evaluates for each group, and concatenates the result.
+
+    """
+    from tqdm import tqdm_notebook as tqdn
+
+    d_1 = {k: v for k,v in df_1.groupby(cols)}
+    d_2 = {k: v for k,v in df_2.groupby(cols)}
+
+    arr = []
+    for k in tqdn(d_1):
+        arr.append(f(d_1[k], d_2[k]))
+    
+    return pd.concat(arr)    
+
+
 def ndarray_to_dataframe(values, index):
     names, levels  = zip(*index)
     columns = pd.MultiIndex.from_product(levels, names=names)
