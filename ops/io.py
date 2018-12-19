@@ -60,7 +60,7 @@ def grid_view(files, bounds, padding=40, with_mask=False):
     return ops.utils.pile(arr)
 
 
-@ops.utils.Memoized
+@ops.utils.memoize(active=False)
 def read_stack(filename, copy=True):
     """Read a .tif file into a numpy array, with optional memory mapping.
     """

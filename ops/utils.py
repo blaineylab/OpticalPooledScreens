@@ -2,52 +2,60 @@ import functools
 
 from string import Formatter
 from itertools import product
-from decorator import decorator
+import decorator
 
 import numpy as np
 import pandas as pd
 
 
 # PYTHON
-class Memoized(object):
-    """Decorator that caches a function's return value each time it is called.
-    If called later with the same arguments, the cached value is returned, and
-    not re-evaluated.
-    Numpy arrays are treated specially with `copy` kwarg.
+def memoize(active=True, copy_numpy=True):
+    """The memoized function has attributes `cache`, `keys`, and `reset`. 
+    
+    @memoize(active=False)
+    def f(...):
+        ...
+    
+    f.keys['active'] = True  # activate memoization
+    f.cache  # the cache itself
+    f.reset()  # reset the cache
 
-    Based on http://wiki.python.org/moin/PythonDecoratorLibrary#Memoize
     """
+    def inner(f):
+        f_ = decorator.decorate(f, _memoize)
 
-    def __init__(self, func):
-        self.func = func
-        self.cache = {}
+        keys = dict(active=active, copy_numpy=copy_numpy)
+        f.keys = keys
+        f_.keys = keys
 
-    def __call__(self, *args, **kwargs):
-        key = str(args) + str(kwargs)
-        try:
-            if isinstance(self.cache[key], np.ndarray):
-                if kwargs.get('copy', True):
-                    return self.cache[key].copy()
-                else:
-                    return self.cache[key]
-            return self.cache[key]
-        except KeyError:
-            value = self.func(*args, **kwargs)
-            self.cache[key] = value
-            return value
+        def reset():
+            cache = {}
+            f.cache = cache
+            f_.cache = cache
+        
+        reset()
+        f_.reset = reset
 
-    def __repr__(self):
-        """Return the function's docstring."""
-        return self.func.__doc__
+        return f_
+    return inner
 
-    def __get__(self, obj, objtype):
-        """Support instance methods."""
-        fn = functools.partial(self.__call__, obj)
-        fn.reset = self._reset
-        return fn
 
-    def _reset(self):
-        self.cache = {}
+def _memoize(f, *args, **kwargs):
+    if not f.keys['active']:
+        return f(*args, **kwargs)
+
+    key = str(args) + str(kwargs)
+    if key not in f.cache:
+        f.cache[key] = f(*args, **kwargs)
+
+    # copy numpy arrays unless disabled by copy_numpy=False
+    if isinstance(f.cache[key], np.ndarray):
+        if f.keys['copy_numpy']:
+            return f.cache[key].copy()
+        else:
+            return f.cache[key]
+
+    return f.cache[key]
 
 
 # PANDAS
