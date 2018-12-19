@@ -1,5 +1,6 @@
 WELL = 'well'
 TILE = 'tile'
+SITE = 'site'
 CELL = 'cell'
 READ = 'read'
 CHANNEL = 'channel'
