@@ -292,7 +292,7 @@ def trim(arr, return_slice=False):
     return arr[sl]
 
 
-@decorator
+@decorator.decorator
 def applyIJ(f, arr, *args, **kwargs):   
     """Apply a function that expects 2D input to the trailing two
     dimensions of an array. The function must output an array whose shape
