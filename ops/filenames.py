@@ -1,5 +1,8 @@
 import re
 import os
+import time
+from urllib.parse import urlparse
+
 from ops.constants import FILE
 
 
@@ -23,7 +26,7 @@ folder_pattern = [
 
 FILE_PATTERN_ABS = ''.join(FILE_PATTERN)
 FILE_PATTERN_REL = ''.join(FILE_PATTERN[2:])
-        
+
 FOLDER_PATTERN_ABS = ''.join(FILE_PATTERN[:2] + folder_pattern)
 folder_pattern_rel = ''.join(folder_pattern)
 
@@ -45,7 +48,8 @@ def parse_filename(filename):
          'ext': 'tif',
          'file': 'example_data/input/10X_c1-SBS-1/10X_c1-SBS-1_A1_Tile-107.max.tif'}
     """
-    filename = os.path.normpath(filename)
+    filename = normpath(filename)
+    # windows
     filename = filename.replace('\\', '/')
 
     patterns = FILE_PATTERN_ABS, FILE_PATTERN_REL, FOLDER_PATTERN_ABS, folder_pattern_rel
@@ -104,7 +108,14 @@ def name_file(description, **more_description):
     
     optional = lambda x: d.get(x, '')
     filename = os.path.join(optional('home'), optional('dataset'), optional('subdir'), basename)
-    return os.path.normpath(filename)
+    return normpath(filename)
+
+
+def normpath(filename):
+    if not urlparse(filename).scheme: # leave remote urls alone
+        filename = os.path.normpath(filename)
+    return filename
+
 
 
 def guess_filename(row, tag, **override_fields):
@@ -139,3 +150,15 @@ def make_filename_pipe(df, output_col, template_or_description=None, **kwargs):
         arr.append(name_file(description))
 
     return df.assign(**{output_col: arr})
+
+
+def timestamp(filename='', fmt='%Y%m%d_%H%M%S', sep='.'):
+    stamp = time.strftime(fmt)
+    pat= r'(.*)\.(.*)'
+    match = re.findall(pat, filename)
+    if match:
+        return sep.join([match[0][0], stamp, match[0][1]])
+    elif filename:
+        return sep.join([filename, stamp])
+    else:
+        return stamp
