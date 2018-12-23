@@ -2,8 +2,8 @@ import functools
 
 from string import Formatter
 from itertools import product
-import decorator
 
+import decorator
 import numpy as np
 import pandas as pd
 
@@ -56,7 +56,7 @@ def _memoize(f, *args, **kwargs):
             return f.cache[key]
 
     return f.cache[key]
-
+    
 
 # PANDAS
 def bin_join(xs, symbol):
