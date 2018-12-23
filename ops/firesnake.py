@@ -411,18 +411,17 @@ class Snake():
             results = f(**input_kwargs)
 
             if 'output' in output_kwargs:
-            	outputs = output_kwargs['output']
-            	# determine if there are multiple outputs 
-            	if isinstance(outputs, str):
-            		outputs = [outputs]
-            		results = [results]
+                outputs = output_kwargs['output']
+                
+                if len(outputs) == 1:
+                    results = [results]
 
-            	if len(outputs) != len(results):
-            		error = '{0} output filenames provided for {1} results'
-            		raise ValueError(error.format(len(outputs), len(results)))
+                if len(outputs) != len(results):
+                    error = '{0} output filenames provided for {1} results'
+                    raise ValueError(error.format(len(outputs), len(results)))
 
-            	for output, result in zip(outputs, results):
-                	save_output(output, result, **output_kwargs)
+                for output, result in zip(outputs, results):
+                    save_output(output, result, **output_kwargs)
 
         return functools.update_wrapper(g, f)
 
@@ -498,9 +497,7 @@ def load_pkl(filename):
 
 
 def load_tif(filename):
-    x = ops.io.read_stack(filename)
-    ops.io.read_stack._reset()
-    return x
+    return ops.io.read_stack(filename)
 
 
 def save_csv(filename, df):
