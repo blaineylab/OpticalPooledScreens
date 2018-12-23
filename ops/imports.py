@@ -23,6 +23,7 @@ from ops.io import BLUE, GREEN, RED, MAGENTA, GRAY, CYAN, GLASBEY
 from ops.io import grid_view
 from ops.filenames import name_file as name
 from ops.filenames import parse_filename as parse
+from ops.filenames import timestamp
 from ops.io import read_stack as read
 from ops.io import save_stack as save
 
