@@ -32,3 +32,5 @@ from ops.utils import pile, montage, make_tiles, trim, join_stacks
 
 from ops.plates import add_global_xy
 
+from ops.pool_design import reverse_complement as rc
+
