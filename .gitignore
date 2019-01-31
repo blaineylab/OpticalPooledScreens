@@ -16,3 +16,12 @@ example_data/*
 !example_data/design.csv
 !example_data/barcodes.csv
 !example_data/Snakefile_20180707_201
+
+!example_pool/
+example_pool/*
+!example_pool/X.txt
+!example_pool/Y.txt
+!example_pool/Z.txt
+!example_pool/design.xls
+!example_pool/kosuri_dialout_primers.csv
+!example_pool/NCBI_ids.tsv
