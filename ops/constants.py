@@ -1,4 +1,9 @@
+# common
 WELL = 'well'
+DATASET = 'dataset'
+FILE = 'file'
+
+# in situ
 TILE = 'tile'
 SITE = 'site'
 CELL = 'cell'
@@ -18,18 +23,39 @@ POSITION_J = 'j'
 GLOBAL_X = 'global_x'
 GLOBAL_Y = 'global_y'
 CLUSTER = 'cluster'
+
+# design
+DIALOUT = 'dialout'
 SUBPOOL = 'subpool'
-SGRNA_NAME = 'sgRNA_name'
-SGRNA_DESIGN = 'sgRNA_design'
-DATASET = 'dataset'
-GENE_SYMBOL = 'gene_symbol'
+DESIGN = 'design'
+VECTOR = 'vector'
+GROUP = 'group'
+PREFIX_LENGTH = 'prefix_length'
+EDIT_DISTANCE = 'edit_distance'
 GENE_ID = 'gene_id'
-FILE = 'file'
 SGRNA = 'sgRNA'
 SGRNA_NAME = 'sgRNA_name'
+GENE_SYMBOL = 'gene_symbol'
+SGRNA_SCORE = 'sgRNA_score'
+RANK = 'rank'
+SOURCE = 'source'
+DUPLICATE_OLIGOS = 'duplicate_oligos'
+OLIGO = 'oligo'
+SGRNAS_PER_GENE = 'sgRNAs_per_gene'
 
+# other
 STIMULANT = 'stimulant'
 GENE_CLASS = 'gene_class'
+NM_ID = 'NM_id'
+
+
+def loc(query):
+    """Fill in constants in a pandas query.
+    GENE_ID = 'gene_id'
+    df.query(loc('{GENE_ID} == -1'))
+    """
+    return query.format(**globals())
+
 
 GLASBEY_INVERTED = """ 
 0  0  0
