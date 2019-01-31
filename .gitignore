@@ -22,6 +22,7 @@ example_pool/*
 !example_pool/X.txt
 !example_pool/Y.txt
 !example_pool/Z.txt
+!example_pool/nontargeting.txt
 !example_pool/design.xls
 !example_pool/kosuri_dialout_primers.csv
 !example_pool/NCBI_ids.tsv
