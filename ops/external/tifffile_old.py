@@ -1102,7 +1102,7 @@ class TiffFile(object):
         result = []
         for element in root:
             if element.tag.endswith('BinaryOnly'):
-                warnings.warn("ome-xml: not an ome-tiff master file")
+                # warnings.warn("ome-xml: not an ome-tiff master file")
                 break
             if element.tag.endswith('StructuredAnnotations'):
                 for annot in element:
