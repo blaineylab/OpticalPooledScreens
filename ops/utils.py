@@ -185,9 +185,9 @@ def rank_by_order(df, groupby_columns):
     """Uses 1-based ranking, like `df.groupby(..).rank()`.
     """
     return (df
-        .groupby(groupby_columns)
-        .apply(lambda x: x.reset_index())
-        .reset_index(level=1)['level_1'].pipe(lambda x: list(1 + x)))
+        .groupby(groupby_columns).cumcount()
+        .pipe(lambda x: list(x + 1))
+        )
 
 
 def flatten_cols(df, f='_'.join):
@@ -205,6 +205,26 @@ def vpipe(df, f, *args, **kwargs):
     """
     return pd.DataFrame(f(df.values, *args, **kwargs), 
                  columns=df.columns, index=df.index)
+
+
+def cast_cols(df, int_cols=tuple(), str_cols=tuple()):
+    return (df
+           .assign(**{c: df[c].astype(int) for c in int_cols})
+           .assign(**{c: df[c].astype(str) for c in str_cols})
+           )
+
+
+def expand_sep(df, col, sep=','):
+    """Expands table by splitting strings. Drops index.
+    """
+    index, values = [], []
+    for i, x in enumerate(df[col]):
+        entries = [y.strip() for y in x.split(sep)]
+        index += [i] * len(entries)
+        values += entries
+        
+    return (pd.DataFrame(df.values[index], columns=df.columns)
+     .assign(**{col: values}))
 
 
 # NUMPY
