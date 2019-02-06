@@ -100,6 +100,9 @@ validate_features()
 
 features_basic = make_feature_dict(('area', 'i', 'j', 'label'))
 
+features_geom = make_feature_dict((
+    'area', 'eccentricity', 'convex_area', 'perimeter'))
+
 features_translocation_nuclear = make_feature_dict((
 	'dapi_gfp_corr', 
 	'eccentricity', 'solidity',
