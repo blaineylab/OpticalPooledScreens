@@ -330,7 +330,8 @@ class Snake():
             .rename(columns={'label': 'cell'}))
 
     def _extract_phenotype_geom(labels, wildcards):
-        return Snake._extract_features(labels, labels, wildcards, dict())
+        from ops.features import features_geom
+        return Snake._extract_features(labels, labels, wildcards, features_geom)
 
     @staticmethod
     def _analyze_DO(DO_410, DO_415, cells, peaks, threshold_peaks, wildcards):
