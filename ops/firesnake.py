@@ -184,7 +184,7 @@ class Snake():
     @staticmethod
     def _extract_bases(maxed, peaks, cells, threshold_peaks, wildcards, bases='GTAC'):
         """Find the signal intensity from `maxed` at each point in `peaks` above 
-        `threshold_peaks`. Output is labeled by `wildcards` (typically well and tile) and 
+        `threshold_peaks`. Output is labeled by `wildcards` (e.g., well and tile) and 
         label at that position in integer mask `cells`.
         """
 
@@ -222,9 +222,11 @@ class Snake():
                 return
         
         cycles = len(set(df_bases['cycle']))
+        channels = len(set(df_bases['channel']))
         return (df_bases
             .pipe(ops.in_situ.clean_up_bases)
-            .pipe(ops.in_situ.do_median_call, cycles, correction_only_in_cells=correction_only_in_cells)
+            .pipe(ops.in_situ.do_median_call, cycles, channels=channels,
+                correction_only_in_cells=correction_only_in_cells)
             )
 
     @staticmethod
@@ -235,7 +237,7 @@ class Snake():
             return
         
         return (df_reads
-            .query('Q_min > @q_min')
+            .query('Q_min >= @q_min')
             .pipe(ops.in_situ.call_cells))
 
     @staticmethod
@@ -326,6 +328,9 @@ class Snake():
     def _extract_phenotype_minimal(data_phenotype, nuclei, wildcards):
         return (Snake._extract_features(data_phenotype, nuclei, wildcards, dict())
             .rename(columns={'label': 'cell'}))
+
+    def _extract_phenotype_geom(labels, wildcards):
+        return Snake._extract_features(labels, labels, wildcards, dict())
 
     @staticmethod
     def _analyze_DO(DO_410, DO_415, cells, peaks, threshold_peaks, wildcards):
