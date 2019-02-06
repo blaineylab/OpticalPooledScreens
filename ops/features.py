@@ -45,6 +45,8 @@ geometry = {
     'mask':     lambda r: ops.utils.Mask(r.image),
     'eccentricity': lambda r: r.eccentricity,
     'solidity': lambda r: r.solidity,
+    'convex_area': lambda r: r.convex_area,
+    'perimeter': lambda r: r.perimeter
     }
 
 # DAPI, HA, myc
