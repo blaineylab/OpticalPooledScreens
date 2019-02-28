@@ -282,6 +282,9 @@ class Snake():
 
     @staticmethod
     def _extract_phenotype_translocation(data_phenotype, nuclei, cells, wildcards):
+        if (nuclei.max() == 0) or (cells.max() == 0):
+            return
+
         import ops.features
 
         features_n = ops.features.features_translocation_nuclear
