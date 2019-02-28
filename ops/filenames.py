@@ -2,6 +2,7 @@ import re
 import os
 import time
 from urllib.parse import urlparse
+from glob import glob
 
 from ops.constants import FILE
 
@@ -162,3 +163,18 @@ def timestamp(filename='', fmt='%Y%m%d_%H%M%S', sep='.'):
         return sep.join([filename, stamp])
     else:
         return stamp
+
+
+def file_frame(files_or_search):
+    """Convenience function, pass either a list of files or a 
+    glob wildcard search term.
+    """
+    from natsort import natsorted
+    import pandas as pd
+
+    if isinstance(files_or_search, str):
+        files = natsorted(glob(files_or_search))
+    else:
+        files = files_or_search
+
+    return pd.DataFrame([parse_filename(f) for f in files])
