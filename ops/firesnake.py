@@ -236,7 +236,6 @@ class Snake():
 
         return df_reads
 
-
     @staticmethod
     def _call_cells(df_reads, q_min=0):
         """Median correction performed independently for each tile.
@@ -291,17 +290,19 @@ class Snake():
         features_n = {k + '_nuclear': v for k,v in features_n.items()}
         features_c = {k + '_cell': v    for k,v in features_c.items()}
 
-        df_n =  Snake._extract_features(data_phenotype, nuclei, wildcards, features_n)
-        df_c =  Snake._extract_features(data_phenotype, cells, wildcards, features_c) 
+        df_n = (Snake._extract_features(data_phenotype, nuclei, wildcards, features_n)
+            .rename(columns={'area': 'area_nuclear'}))
+
+        df_c =  (Snake._extract_features(data_phenotype, cells, wildcards, features_c)
+            .drop(['i', 'j'], axis=1).rename(columns={'area': 'area_cell'}))
+
 
         # inner join discards nuclei without corresponding cells
         df = (pd.concat([df_n.set_index('label'), df_c.set_index('label')], axis=1, join='inner')
                 .reset_index())
 
         return (df
-            # area is redundant
-            .rename(columns={'label': 'cell', 'area': 'area_nuclear'})
-            .loc[:, ~df.columns.duplicated()])
+            .rename(columns={'label': 'cell'}))
 
     @staticmethod
     def _extract_phenotype_translocation_live(data, nuclei, wildcards):
@@ -337,6 +338,7 @@ class Snake():
         return (Snake._extract_features(data_phenotype, nuclei, wildcards, dict())
             .rename(columns={'label': 'cell'}))
 
+    @staticmethod
     def _extract_phenotype_geom(labels, wildcards):
         from ops.features import features_geom
         return Snake._extract_features(labels, labels, wildcards, features_geom)
