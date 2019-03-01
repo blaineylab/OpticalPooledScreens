@@ -23,14 +23,14 @@ from ops.io import BLUE, GREEN, RED, MAGENTA, GRAY, CYAN, GLASBEY
 from ops.io import grid_view
 from ops.filenames import name_file as name
 from ops.filenames import parse_filename as parse
-from ops.filenames import timestamp
+from ops.filenames import timestamp, file_frame
 from ops.io import read_stack as read
 from ops.io import save_stack as save
 
 from ops.utils import or_join, and_join, groupby_reduce_concat, groupby_histogram
 from ops.utils import pile, montage, make_tiles, trim, join_stacks
 
-from ops.plates import add_global_xy
+from ops.plates import add_global_xy, add_row_col
 
 from ops.pool_design import reverse_complement as rc
 
