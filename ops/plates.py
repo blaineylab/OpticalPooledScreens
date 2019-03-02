@@ -65,8 +65,23 @@ def plate_coordinate(well, tile, well_spacing, grid_spacing, grid_shape):
     return i, j
 
 
-def well_to_row_col(well):
-    return string.ascii_uppercase.index(well[0]), int(well[1:]) - 1
+def add_row_col(df, well='well', mit=False):
+    rows, cols = zip(*[well_to_row_col(w, mit=mit) for w in df[well]])
+    return df.assign(row=rows, col=cols)
+
+
+def well_to_row_col(well, mit=False):
+    if mit:
+        return string.ascii_uppercase.index(well[0]), int(well[1:]) - 1
+    else:
+        return well[0], int(well[1:])
+
+
+def standardize_well(df, col='well'):
+    """Sane well labels.
+    """
+    arr = ['{0}{1:02d}'.format(w[0], int(w[1:])) for w in df[col]]
+    return df.assign(**{col: arr})
 
 
 def remap_snake(site, grid_shape):
