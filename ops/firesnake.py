@@ -171,6 +171,8 @@ class Snake():
         """
         import scipy.ndimage.filters
 
+        if data.ndim == 2:
+            data = data[None, None]
         if data.ndim == 3:
             data = data[None]
 
@@ -347,15 +349,17 @@ class Snake():
         return Snake._extract_features(labels, labels, wildcards, features_geom)
 
     @staticmethod
-    def _analyze_DO(DO_410, DO_415, cells, peaks, threshold_peaks, wildcards):
-        data = np.array([DO_410, DO_415])
+    def _analyze_single(data, alignment_ref, cells, peaks, 
+                        threshold_peaks, wildcards, channel_ix=1):
+        if alignment_ref.ndim == 3:
+            alignment_ref = alignment_ref[0]
+        data = np.array([[alignment_ref, alignment_ref], 
+                          data[[0, channel_ix]]])
         aligned = ops.process.Align.align_between_cycles(data, 0, window=2)
-        aligned = np.array([aligned[0, 0], aligned[0, 1], aligned[1, 1]])
-        loged = Snake._transform_log(aligned, skip_index=0)
-        maxed = Snake._max_filter(loged, width=3, remove_index=0)
-        return Snake._extract_bases(maxed, peaks, cells, 
-            bases=['410', '415'],
-            threshold_peaks=threshold_peaks, wildcards=wildcards)
+        loged = Snake._transform_log(aligned[1, 1])
+        maxed = Snake._max_filter(loged, width=3)
+        return (Snake._extract_bases(maxed, peaks, cells, bases=['-'],
+                    threshold_peaks=threshold_peaks, wildcards=wildcards))
 
     @staticmethod
     def _track_live_nuclei(data, threshold=800, area_lim=(100, 500), 
