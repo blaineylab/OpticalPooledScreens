@@ -102,25 +102,34 @@ def groupby_reduce_concat(gb, *args, **kwargs):
     return pd.concat(arr, axis=1).reset_index()
 
 
-def groupby_histogram(df, index, column, bins, cumulative=False):
+def groupby_histogram(df, index, column, bins, cumulative=False, normalize=False):
     """Substitute for df.groupby(index)[column].value_counts(),
     only supports one column label.
-
-    TODO: switch to value counts (fill in missing), option to return long or wide
     """
     maybe_cumsum = lambda x: x.cumsum(axis=1) if cumulative else x
+    maybe_normalize = lambda x: x.div(x.sum(axis=1), axis=0) if normalize else x
     column_bin = column + '_bin'
-    column_count = column + ('_csum' if cumulative else '_count')
+    if cumulative and normalize:
+        new_col = 'csum_fraction'
+    elif cumulative and not normalize:
+        new_col = 'csum'
+    elif not cumulative and normalize:
+        new_col = 'fraction'
+    else:
+        new_col = 'count'
+
+    column_value = column + ('_csum' if cumulative else '_count')
     bins = np.array(bins)
     return (df
         .assign(dummy=1)
-        .assign(**{column_bin: bins[np.digitize(df[column], bins) - 1]})
-        .pivot_table(index=index, columns=column_bin, values='dummy', 
+        .assign(bin=bins[np.digitize(df[column], bins) - 1])
+        .pivot_table(index=index, columns='bin', values='dummy', 
                      aggfunc='sum')
         .reindex(labels=list(bins), axis=1)
         .fillna(0).astype(int)
         .pipe(maybe_cumsum)
-        .stack().rename(column_count)
+        .pipe(maybe_normalize)
+        .stack().rename(new_col)
         .reset_index()
            )
 
@@ -190,9 +199,11 @@ def rank_by_order(df, groupby_columns):
         )
 
 
-def flatten_cols(df, f='_'.join):
+def flatten_cols(df, f='underscore'):
     """Flatten column multi index.
     """
+    if f == 'underscore':
+        f = lambda x: '_'.join(y for y in x if y)
     df = df.copy()
     df.columns = [f(x) for x in df.columns]
     return df
@@ -225,6 +236,27 @@ def expand_sep(df, col, sep=','):
         
     return (pd.DataFrame(df.values[index], columns=df.columns)
      .assign(**{col: values}))
+
+
+def csv_frame(files_or_search):
+    """Convenience function, pass either a list of files or a 
+    glob wildcard search term.
+    """
+    from natsort import natsorted
+    import pandas as pd
+    
+    def read_csv(f):
+        try:
+            return pd.read_csv(f)
+        except pd.errors.EmptyDataError:
+            return None
+    
+    if isinstance(files_or_search, str):
+        files = natsorted(glob(files_or_search))
+    else:
+        files = files_or_search
+
+    return pd.concat([read_csv(f) for f in files], sort=True)
 
 
 # NUMPY
