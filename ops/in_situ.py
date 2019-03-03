@@ -3,8 +3,6 @@ import pandas as pd
 from ops.constants import *
 import ops.utils
 
-IMAGING_ORDER = 'GTAC'
-
 
 def extract_base_intensity(maxed, peaks, cells, threshold_peaks):
 
@@ -37,7 +35,7 @@ def format_bases(values, labels, positions, cycles, bases):
     return df
 
 
-def do_median_call(df_bases, cycles=12, channels=4, correction_only_in_cells=False):
+def do_median_call(df_bases, cycles=12, channels=4, bases='GTAC', correction_only_in_cells=False):
     """Call reads from raw base signal using median correction. Use the 
     `correction_within_cells` flag to specify if correction is based on reads within 
     cells, or all reads.
@@ -54,7 +52,7 @@ def do_median_call(df_bases, cycles=12, channels=4, correction_only_in_cells=Fal
         X = dataframe_to_values(df_bases, channels=channels)
         Y, W = transform_medians(X.reshape(-1, channels))
 
-    df_reads = call_barcodes(df_bases, Y, cycles=cycles, channels=channels)
+    df_reads = call_barcodes(df_bases, Y, bases, cycles=cycles, channels=channels)
 
     return df_reads
 
@@ -124,8 +122,7 @@ def transform_medians(X):
     return Y, W
 
 
-def call_barcodes(df_bases, Y, cycles=12, channels=4):
-    bases = sorted(IMAGING_ORDER[:channels])
+def call_barcodes(df_bases, Y, bases, cycles=12, channels=4):
     df_reads = df_bases.drop_duplicates([WELL, TILE, READ]).copy()
     df_reads[BARCODE] = call_bases_fast(Y.reshape(-1, cycles, channels), bases)
     Q = quality(Y.reshape(-1, cycles, channels))
