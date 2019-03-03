@@ -35,7 +35,7 @@ def format_bases(values, labels, positions, cycles, bases):
     return df
 
 
-def do_median_call(df_bases, cycles=12, channels=4, bases='GTAC', correction_only_in_cells=False):
+def do_median_call(df_bases, cycles=12, channels=4, correction_only_in_cells=False):
     """Call reads from raw base signal using median correction. Use the 
     `correction_within_cells` flag to specify if correction is based on reads within 
     cells, or all reads.
@@ -122,7 +122,10 @@ def transform_medians(X):
     return Y, W
 
 
-def call_barcodes(df_bases, Y, bases, cycles=12, channels=4):
+def call_barcodes(df_bases, Y, cycles=12, channels=4):
+    bases = sorted(set(df_bases[CHANNEL]))
+    if any(len(x) != 1 for x in bases):
+        raise ValueError('supplied weird bases: {0}'.format(bases))
     df_reads = df_bases.drop_duplicates([WELL, TILE, READ]).copy()
     df_reads[BARCODE] = call_bases_fast(Y.reshape(-1, cycles, channels), bases)
     Q = quality(Y.reshape(-1, cycles, channels))

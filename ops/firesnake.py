@@ -212,7 +212,7 @@ class Snake():
         return df_bases
 
     @staticmethod
-    def _call_reads(df_bases, peaks=None, bases='GTAC', correction_only_in_cells=True):
+    def _call_reads(df_bases, peaks=None, correction_only_in_cells=True):
         """Median correction performed independently for each tile.
         Use the `correction_only_in_cells` flag to specify if correction
         is based on reads within cells, or all reads.
@@ -229,7 +229,6 @@ class Snake():
         df_reads = (df_bases
             .pipe(ops.in_situ.clean_up_bases)
             .pipe(ops.in_situ.do_median_call, cycles, channels=channels,
-                bases=bases,
                 correction_only_in_cells=correction_only_in_cells)
             )
 
