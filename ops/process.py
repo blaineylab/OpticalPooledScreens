@@ -265,3 +265,73 @@ def apply_watershed(img, smooth=4):
     result = skimage.morphology.watershed(-distance, markers, mask=img)
     return result.astype(np.uint16)
 
+
+
+def alpha_blend(arr, positions, clip=True, edge=0.95, edge_width=0.02, subpixel=False):
+    """Blend array of images, translating image coordinates according to offset matrix.
+    arr : N x I x J
+    positions : N x 2 (n, i, j)
+    """
+    
+    # @ops.utils.memoize
+    def make_alpha(s, edge=0.95, edge_width=0.02):
+        """Unity in center, drops off near edge
+        :param s: shape
+        :param edge: mid-point of drop-off
+        :param edge_width: width of drop-off in exponential
+        :return:
+        """
+        sigmoid = lambda r: 1. / (1. + np.exp(-r))
+
+        x, y = np.meshgrid(range(s[0]), range(s[1]))
+        xy = np.concatenate([x[None, ...] - s[0] / 2,
+                             y[None, ...] - s[1] / 2])
+        R = np.max(np.abs(xy), axis=0)
+
+        return sigmoid(-(R - s[0] * edge/2) / (s[0] * edge_width))
+
+    # determine output shape, offset positions as necessary
+    if subpixel:
+        positions = np.array(positions)
+    else:
+        positions = np.round(positions)
+    # convert from ij to xy
+    positions = positions[:, [1, 0]]    
+
+    positions -= positions.min(axis=0)
+    shapes = [a.shape for a in arr]
+    output_shape = np.ceil((shapes + positions[:,::-1]).max(axis=0)).astype(int)
+
+    # sum data and alpha layer separately, divide data by alpha
+    output = np.zeros([2] + list(output_shape), dtype=float)
+    for image, xy in zip(arr, positions):
+        alpha = 100 * make_alpha(image.shape, edge=edge, edge_width=edge_width)
+        if subpixel is False:
+            j, i = np.round(xy).astype(int)
+
+            output[0, i:i+image.shape[0], j:j+image.shape[1]] += image * alpha.T
+            output[1, i:i+image.shape[0], j:j+image.shape[1]] += alpha.T
+        else:
+            ST = skimage.transform.SimilarityTransform(translation=xy)
+
+            tmp = np.array([skimage.transform.warp(image, inverse_map=ST.inverse,
+                                                   output_shape=output_shape,
+                                                   preserve_range=True, mode='reflect'),
+                            skimage.transform.warp(alpha, inverse_map=ST.inverse,
+                                                   output_shape=output_shape,
+                                                   preserve_range=True, mode='constant')])
+            tmp[0, :, :] *= tmp[1, :, :]
+            output += tmp
+
+
+    output = (output[0, :, :] / output[1, :, :])
+
+    if clip:
+        def edges(n):
+            return np.r_[n[:4, :].flatten(), n[-4:, :].flatten(),
+                         n[:, :4].flatten(), n[:, -4:].flatten()]
+
+        while np.isnan(edges(output)).any():
+            output = output[4:-4, 4:-4]
+
+    return output.astype(arr[0].dtype)

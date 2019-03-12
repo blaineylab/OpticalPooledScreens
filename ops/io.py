@@ -206,3 +206,21 @@ def ij_tag_50839(luts, display_ranges):
     tag = struct.unpack('<' + 'B' * len(tag), tag)
     return tag + tuple(sum([list(x) for x in luts], []))
     
+
+def load_stitching_offsets(filename):
+    """Load i,j coordinates from the text file saved by the Fiji 
+    Grid/Collection stitching plugin.
+    """
+    from ast import literal_eval
+    
+    with open(filename, 'r') as fh:
+        txt = fh.read()
+    txt = txt.split('# Define the image coordinates')[1]
+    lines = txt.split('\n')
+    coordinates = []
+    for line in lines:
+        parts = line.split(';')
+        if len(parts) == 3:
+            coordinates += [parts[-1].strip()]
+    
+    return [(i,j) for j,i in map(literal_eval, coordinates)]
