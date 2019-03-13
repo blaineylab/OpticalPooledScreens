@@ -51,17 +51,20 @@ def get_metadata_at_coords(nd2, **coords):
                     't_ms': nd2._buf_md.dTimeMSec,
                 }    
 
-def extract_nd2_metadata(f, interpolate=True):
+def extract_nd2_metadata(f, interpolate=True, progress=None):
     """Interpolation fills in timestamps linearly for each well; x,y,z positions 
     are copied from the first time point. 
     """
     nd2 = ND2_Reader(f)
 
     ts = range(nd2.sizes['t'])
-    ms = range(nd2.sizes['m'])        
-        
+    ms = range(nd2.sizes['m'])   
+
+    if progress is None:
+        progress = lambda x: x
+
     arr = []
-    for t, m in tqdn(list(product(ts, ms))):
+    for t, m in progress(list(product(ts, ms))):
         boundaries = [0, nd2.sizes['m'] - 1]
         skip = m not in boundaries and t > 0
         if interpolate and skip:
