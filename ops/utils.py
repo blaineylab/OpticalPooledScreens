@@ -2,6 +2,7 @@ import functools
 
 from string import Formatter
 from itertools import product
+from glob import glob
 
 import decorator
 import numpy as np
@@ -79,6 +80,7 @@ def groupby_reduce_concat(gb, *args, **kwargs):
     for arg in args:
         kwargs[arg] = arg
     reductions = {'mean': lambda x: x.mean(),
+                  'median': lambda x: x.median(),
                   'std': lambda x: x.std(),
                   'sem': lambda x: x.sem(),
                   'size': lambda x: x.size(),
