@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.spatial.kdtree import KDTree
 from scipy.stats import mode
 from pims import ND2_Reader
+from itertools import product
 
 from ops.constants import *
 
