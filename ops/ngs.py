@@ -6,7 +6,7 @@ from natsort import natsorted
 # TODO: from ops.constants import *
 import ops.utils
 
-def load_hist(filename, threshold=3):
+def load_hist(filename, threshold):
     try:
         return (pd.read_csv(filename, sep='\s+', header=None)
             .rename(columns={0: 'count', 1: 'seq'})
@@ -19,17 +19,18 @@ def load_hist(filename, threshold=3):
         return None
 
 
-def load_sgRNA_hists(histogram_files):
+def load_sgRNA_hists(histogram_files, threshold=3):
     pat = '(?P<plate>T.)_(?P<well>(?P<row>.)(?P<col>..))_S'
     cols = ['dataset', 'plate', 'well', 'row', 'col', 
             'count', 'log10_fraction', 'fraction', 'sgRNA']
     arr = []
     for dataset, search in histogram_files.items():
         files = natsorted(glob(search))
-        (pd.concat([load_hist(f) for f in files])
+        (pd.concat([load_hist(f, threshold) for f in files])
          .rename(columns={'seq': 'sgRNA'})
          .pipe(lambda x: pd.concat([x['file'].str.extract(pat), x], 
                                    axis=1))
+         .pipe(ops.utils.cast_cols, int_cols=['col'])
          .drop(['file'], axis=1)
          .assign(dataset=dataset)
          [cols]
