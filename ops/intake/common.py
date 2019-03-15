@@ -91,3 +91,36 @@ def extract_nd2_metadata(f, interpolate=True, progress=None):
     else:
         return df_info
 
+
+
+def build_file_table(f_nd2, f_template, wells):
+    """
+    Example:
+    
+    wells = 'A1', 'A2', 'A3', 'B1', 'B2', 'B3'
+    f_template = 'input/10X_Hoechst-mNeon/10X_Hoechst-mNeon_A1.live.tif'
+    build_file_table(f_nd2, f_template, wells)
+    """
+    rename = lambda x: name(parse(f_template), **x)
+
+    get_well = lambda x: wells[int(re.findall('Well(\d)', x)[0]) - 1]
+    df_files = (common.extract_nd2_metadata(f_nd2, progress=tqdn)
+     .assign(well=lambda x: x['file'].apply(get_well))
+     .assign(site=lambda x: x['m'])
+     .assign(file_=lambda x: x.apply(rename, axis=1))
+    )
+    
+    return df_files
+
+def export_nd2(f_nd2, df_files):
+
+    df = df_files.drop_duplicates('file_')
+
+    with ND2_Reader(f_nd2) as nd2:
+
+        nd2.iter_axes = 'm'
+        nd2.bundle_axes = ['t', 'c', 'y', 'x']
+
+        for m, data in tqdn(enumerate(nd2)):
+            f_out = df.query('m == @m')['file_'].iloc[0]
+            save(f_out, data)
