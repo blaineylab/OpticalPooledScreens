@@ -56,28 +56,27 @@ def extract_nd2_metadata(f, interpolate=True, progress=None):
     """Interpolation fills in timestamps linearly for each well; x,y,z positions 
     are copied from the first time point. 
     """
-    nd2 = ND2_Reader(f)
+    with ND2_Reader(f) as nd2:
 
-    ts = range(nd2.sizes['t'])
-    ms = range(nd2.sizes['m'])   
+        ts = range(nd2.sizes['t'])
+        ms = range(nd2.sizes['m'])   
 
-    if progress is None:
-        progress = lambda x: x
+        if progress is None:
+            progress = lambda x: x
 
-    arr = []
-    for t, m in progress(list(product(ts, ms))):
-        boundaries = [0, nd2.sizes['m'] - 1]
-        skip = m not in boundaries and t > 0
-        if interpolate and skip:
-            metadata = {}
-        else:
-            metadata = get_metadata_at_coords(nd2, t=t, m=m)
-        metadata['t'] = t
-        metadata['m'] = m
-        metadata['file'] = f
-        arr += [metadata]
+        arr = []
+        for t, m in progress(list(product(ts, ms))):
+            boundaries = [0, nd2.sizes['m'] - 1]
+            skip = m not in boundaries and t > 0
+            if interpolate and skip:
+                metadata = {}
+            else:
+                metadata = get_metadata_at_coords(nd2, t=t, m=m)
+            metadata['t'] = t
+            metadata['m'] = m
+            metadata['file'] = f
+            arr += [metadata]
     
-    nd2.close()
         
     df_info = pd.DataFrame(arr)
     if interpolate:
