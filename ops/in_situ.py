@@ -92,14 +92,15 @@ def call_cells(df_reads):
     )
 
 
-def dataframe_to_values(df, value='intensity', channels=4):
-    """Dataframe must be sorted on [cycles, channels]. 
+def dataframe_to_values(df, value='intensity'):
+    """Dataframe must be sorted on [cycle, channel]. 
     Returns N x cycles x channels.
     """
-    cycles = df['cycle'].value_counts()
+    cycles = df[CYCLE].value_counts()
     assert len(set(cycles)) == 1
     n_cycles = len(cycles)
-    x = np.array(df[value]).reshape(-1, n_cycles, channels)
+    n_channels = len(df[CHANNEL].value_counts())
+    x = np.array(df[value]).reshape(-1, n_cycles, n_channels)
     return x
 
 
