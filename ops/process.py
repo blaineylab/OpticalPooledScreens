@@ -123,7 +123,22 @@ class Align:
         p = np.percentile(data_, q_norm, axis=(-2, -1))[..., None, None]
         normed = data_ / p
         return normed
-    
+
+    @staticmethod
+    @ops.utils.applyIJ
+    def filter_percentiles(data, q1, q2):
+        """Replaces data outside of percentile range [q1, q2]
+        with uniform noise over the range [q1, q2]. Useful for 
+        eliminating alignment artifacts due to bright features or 
+        regions of zeros.
+        """
+        x1, x2 = np.percentile(data, [q1, q2])
+        mask = (x1 > data) | (x2 < data)
+        filtered = data.copy()
+        rs = np.random.RandomState(0)
+        filtered[mask] = rs.uniform(x1, x2, mask.sum()).astype(data.dtype)
+        return filtered
+
     @staticmethod
     def calculate_offsets(data_, upsample_factor):
         target = data_[0]
@@ -152,11 +167,11 @@ class Align:
         return np.array(warped)
 
     @staticmethod
-    def align_within_cycle(data_, upsample_factor=4, window=1, q_norm=70, cutoff=None):
-        normed = Align.normalize_by_percentile(Align.apply_window(data_, window), q_norm=70)
-        if cutoff:
-        	normed[normed > cutoff] = cutoff
-        offsets = Align.calculate_offsets(normed, upsample_factor=upsample_factor)
+    def align_within_cycle(data_, upsample_factor=4, window=1, q1=0, q2=90):
+        filtered = Align.filter_percentiles(Align.apply_window(data_, window), 
+            q1=q1, q2=q2)
+
+        offsets = Align.calculate_offsets(filtered, upsample_factor=upsample_factor)
 
         return Align.apply_offsets(data_, offsets)
 
@@ -184,6 +199,8 @@ class Align:
         find_border = lambda x: int((x/2.) * (1 - 1/float(window)))
         i, j = find_border(height), find_border(width)
         return data[..., i:height - i, j:width - j]
+
+
 
 
 # SEGMENT
