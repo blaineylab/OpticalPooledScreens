@@ -18,7 +18,7 @@ FILE_PATTERN = [
         r'(?:_Tile-(?P<tile>([0-9]+)))?',
         r'(?:\.(?P<tag>.*))*\.(?P<ext>.*)']
 
-folder_pattern = [
+FOLDER_PATTERN = [
         r'(?P<mag>[0-9]+X).',
         r'(?:(?P<cycle>[^_\.]*).*?)\/',
         r'(?P<well>[A-H][0-9]+)',
@@ -28,11 +28,11 @@ folder_pattern = [
 FILE_PATTERN_ABS = ''.join(FILE_PATTERN)
 FILE_PATTERN_REL = ''.join(FILE_PATTERN[2:])
 
-FOLDER_PATTERN_ABS = ''.join(FILE_PATTERN[:2] + folder_pattern)
-folder_pattern_rel = ''.join(folder_pattern)
+FOLDER_PATTERN_ABS = ''.join(FILE_PATTERN[:2] + FOLDER_PATTERN)
+FOLDER_PATTERN_REL = ''.join(FOLDER_PATTERN)
 
 
-def parse_filename(filename):
+def parse_filename(filename, custom_patterns=None):
     """Parse filename into dictionary. 
 
     Some entries in the dictionary are optional, e.g., cycle and tile.
@@ -53,7 +53,11 @@ def parse_filename(filename):
     # windows
     filename = filename.replace('\\', '/')
 
-    patterns = FILE_PATTERN_ABS, FILE_PATTERN_REL, FOLDER_PATTERN_ABS, folder_pattern_rel
+    patterns = [FILE_PATTERN_ABS, FILE_PATTERN_REL, 
+                FOLDER_PATTERN_ABS, FOLDER_PATTERN_REL]
+
+    if custom_patterns is not None:
+        patterns += list(custom_patterns)
 
     for pattern in patterns:
         match = re.match(pattern, filename)
@@ -165,9 +169,9 @@ def timestamp(filename='', fmt='%Y%m%d_%H%M%S', sep='.'):
         return stamp
 
 
-def file_frame(files_or_search):
+def file_frame(files_or_search, **kwargs):
     """Convenience function, pass either a list of files or a 
-    glob wildcard search term.
+    glob wildcard search term. Extra arguments passed to `parse_filename`.
     """
     from natsort import natsorted
     import pandas as pd
@@ -177,4 +181,4 @@ def file_frame(files_or_search):
     else:
         files = files_or_search
 
-    return pd.DataFrame([parse_filename(f) for f in files])
+    return pd.DataFrame([parse_filename(f, **kwargs) for f in files])
