@@ -27,7 +27,7 @@ class Snake():
 
     @staticmethod
     def _align_SBS(data, method='DAPI', upsample_factor=2, window=4, cutoff=1,
-        align_within_cycle=True):
+        align_within_cycle=True, keep_trailing=False):
         """Rigid alignment of sequencing cycles and channels. 
 
         Expects `data` to be an array with dimensions (CYCLE, CHANNEL, I, J).
@@ -36,6 +36,10 @@ class Snake():
         one (can be slow).
         """
         data = np.array(data)
+        if keep_trailing:
+            valid_channels = min([len(x) for x in data])
+            data = np.array([x[-valid_channels:] for x in data])
+
         assert data.ndim == 4, 'Input data must have dimensions CYCLE, CHANNEL, I, J'
 
         # align between SBS channels for each cycle
@@ -110,8 +114,12 @@ class Snake():
         if data.ndim == 4:
             # no DAPI, min over cycles, mean over channels
             mask = data[:, 1:].min(axis=0).mean(axis=0)
-        else:
+        elif data.ndim == 3:
             mask = np.median(data[1:], axis=0)
+        elif data.ndim == 2:
+            mask = data
+        else:
+            raise ValueError
 
         mask = mask > threshold
         try:
