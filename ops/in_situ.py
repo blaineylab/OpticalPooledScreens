@@ -42,14 +42,14 @@ def do_median_call(df_bases, cycles=12, channels=4, correction_only_in_cells=Fal
     """
     if correction_only_in_cells:
         # first obtain transformation matrix W
-        X_ = dataframe_to_values(df_bases.query('cell > 0'), channels=channels)
+        X_ = dataframe_to_values(df_bases.query('cell > 0'))
         _, W = transform_medians(X_.reshape(-1, channels))
 
         # then apply to all data
-        X = dataframe_to_values(df_bases, channels=channels)
+        X = dataframe_to_values(df_bases)
         Y = W.dot(X.reshape(-1, channels).T).T.astype(int)
     else:
-        X = dataframe_to_values(df_bases, channels=channels)
+        X = dataframe_to_values(df_bases)
         Y, W = transform_medians(X.reshape(-1, channels))
 
     df_reads = call_barcodes(df_bases, Y, cycles=cycles, channels=channels)

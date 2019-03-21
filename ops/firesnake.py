@@ -26,7 +26,7 @@ class Snake():
     """
 
     @staticmethod
-    def _align_SBS(data, method='DAPI', upsample_factor=2, window=4, cutoff=1,
+    def _align_SBS(data, method='DAPI', upsample_factor=2, window=2, cutoff=1,
         align_within_cycle=True, keep_trailing=False):
         """Rigid alignment of sequencing cycles and channels. 
 
@@ -157,7 +157,7 @@ class Snake():
         return consensus
     
     @staticmethod
-    def _find_peaks(data, remove_index=None):
+    def _find_peaks(data, width=5, remove_index=None):
         """Find local maxima and label by difference to next-highest neighboring
         pixel.
         """
@@ -167,7 +167,7 @@ class Snake():
         if data.ndim == 2:
             data = [data]
 
-        peaks = [ops.process.find_peaks(x) 
+        peaks = [ops.process.find_peaks(x, n=width) 
                     if x.max() > 0 else x 
                     for x in data]
         peaks = np.array(peaks).squeeze()
