@@ -1,9 +1,114 @@
+import ops.utils
+import ops.figures.plotting
+
 import networkx as nx
 import pandas as pd
 import numpy as np
 import scipy.spatial.kdtree
 from collections import Counter
 
+from scipy.interpolate import UnivariateSpline
+from statsmodels.stats.multitest import multipletests
+
+
+def format_stats_wide(df_stats):
+    index = ['gene_symbol']
+    columns = ['stat_name', 'stimulant']
+    values = ['statistic', 'pval', 'pval_FDR_10']
+
+    stats = (df_stats
+     .pivot_table(index=index, columns=columns, values=values)
+     .pipe(ops.utils.flatten_cols))
+
+    counts = (df_stats
+     .pivot_table(index=index, columns='stimulant', values='count')
+     .rename(columns=lambda x: 'cells_' + x))
+
+    return pd.concat([stats, counts], axis=1)
+
+
+def distribution_difference(df):
+    col = 'dapi_gfp_corr_early'
+    y_neg = (df
+      .query('gene_symbol == "non-targeting"')
+      [col]
+    )
+    return df.groupby('gene_symbol').apply(lambda x:
+      scipy.stats.wasserstein_distance(x[col], y_neg))
+
+
+def add_est_timestamps(df_all):
+    s_per_frame = 24 * 60
+    sites_per_frame = 2 * 364
+    s_per_site = s_per_frame / sites_per_frame
+    starting_time = 3 * 60
+
+    cols = ['frame', 'well', 'site']
+    df_ws = df_all[cols].drop_duplicates().sort_values(cols)
+
+    est_timestamps = [(starting_time + i*s_per_site) / 3600
+                      for i in range(len(df_ws))]
+
+    df_ws['timestamp'] = est_timestamps
+
+    return df_all.join(df_ws.set_index(cols), on=cols)
+
+
+def add_dapi_diff(df_all):
+    index = ['well', 'site', 'cell_ph']
+    dapi_diff = (df_all
+     .pivot_table(index=index, columns='frame', 
+                  values='dapi_max')
+     .pipe(lambda x: x/x.mean())
+     .pipe(lambda x: x.max(axis=1) - x.min(axis=1))
+     .rename('dapi_diff')
+    )
+    
+    return df_all.join(dapi_diff, on=index)
+
+
+def add_spline_diff(df, s=25):
+
+    T_neg, Y_neg = (df
+     .query('gene_symbol == "non-targeting"')
+     .groupby('timestamp')
+     ['dapi_gfp_corr'].mean()
+     .reset_index().values.T
+    )
+
+    ix = np.argsort(T_neg)
+    spl = UnivariateSpline(T_neg[ix], Y_neg[ix], s=s)
+
+    return (df
+     .assign(splined=lambda x: spl(df['timestamp']))
+     .assign(spline_diff=lambda x: x.eval('dapi_gfp_corr - splined'))
+    )
+
+
+def get_stats(df, col='spline_diff'):
+    df_diff = (df
+     .groupby(['gene_symbol', 'cell'])
+     [col].mean()
+     .sort_values(ascending=False)
+     .reset_index())
+
+    negative_vals = (df_diff
+     .query('gene_symbol == "non-targeting"')
+     [col]
+    )
+
+    test = lambda x: scipy.stats.ttest_ind(x, negative_vals).pvalue
+
+    stats = (df_diff.groupby('gene_symbol')
+     [col]
+     .pipe(ops.utils.groupby_reduce_concat, 'mean', 'count', 
+           pval=lambda x: x.apply(test))
+     .assign(pval_FDR_10=lambda x: 
+            multipletests(x['pval'], 0.1)[1]))
+    
+    return stats
+
+# track nuclei
 
 def initialize_graph(df):
     arr_df = [x for _, x in df.groupby('frame')]
@@ -89,4 +194,54 @@ def relabel_nuclei(nuclei, relabel):
         nuclei_[i] = table[nuclei_[i]]
 
     return nuclei_
+
+
+# plot traces
+
+def plot_traces_gene_stim(df, df_neg, gene):
+    
+    fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(12, 12), 
+                        sharex=True, sharey=True)  
+    for stim, df_1 in df.groupby('stimulant'):
+        if stim == 'TNFa':
+            axs_ = axs[:2]
+            color = ops.figures.plotting.ORANGE
+        else:
+            axs_ = axs[2:]
+            color = ops.figures.plotting.BLUE
+
+        x_neg, y_neg = (df_neg
+         .query('stimulant == @stim')
+         .groupby(['frame'])
+         [['timestamp', 'dapi_gfp_corr']].mean()
+         .values.T)
+
+        for ax, (sg, df_2) in zip(axs_.flat[:], 
+                                 df_1.groupby('sgRNA_name')):
+            plot_traces(df_2, ax, sg, color)
+            ax.plot(x_neg, y_neg, c='black')
+            
+    return fig
+
+
+def plot_traces(df, ax, sgRNA_label, color):
+    
+    index = ['well', 'tile', 'cell', 'sgRNA_name']
+    values = ['timestamp', 'dapi_gfp_corr']
+    wide = (df
+     .pivot_table(index=index, columns='frame', 
+                   values=values)
+    )
+    x = wide['timestamp'].values
+    y = wide['dapi_gfp_corr'].values
+    
+    ax.plot(x.T, y.T, c=color, alpha=0.2)
+    ax.set_title(sgRNA_label)
+    
+
+df_neg = (df_all.query(cell_gate)
+ .query('gene_symbol == "non-targeting"')
+ .assign(sgRNA_name='0_nt')
+)    
+
 
