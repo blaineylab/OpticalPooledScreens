@@ -28,7 +28,7 @@ from ops.io import read_stack as read
 from ops.io import save_stack as save
 
 from ops.utils import or_join, and_join, groupby_reduce_concat, groupby_histogram
-from ops.utils import pile, montage, make_tiles, trim, join_stacks
+from ops.utils import pile, montage, make_tiles, trim, join_stacks, csv_frame
 
 from ops.plates import add_global_xy, add_row_col
 
