@@ -1,5 +1,4 @@
 import ops.utils
-import ops.figures.plotting
 
 import networkx as nx
 import pandas as pd
@@ -199,7 +198,7 @@ def relabel_nuclei(nuclei, relabel):
 # plot traces
 
 def plot_traces_gene_stim(df, df_neg, gene):
-    
+    import ops.figures.plotting
     fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(12, 12), 
                         sharex=True, sharey=True)  
     for stim, df_1 in df.groupby('stimulant'):
@@ -238,10 +237,4 @@ def plot_traces(df, ax, sgRNA_label, color):
     ax.plot(x.T, y.T, c=color, alpha=0.2)
     ax.set_title(sgRNA_label)
     
-
-df_neg = (df_all.query(cell_gate)
- .query('gene_symbol == "non-targeting"')
- .assign(sgRNA_name='0_nt')
-)    
-
 
