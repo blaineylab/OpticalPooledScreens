@@ -2,6 +2,7 @@
 
 from ops.imports import *
 from ops.firesnake import Snake
+from ops.process import Align
 
 import IPython
 IPython.get_ipython().run_line_magic('load_ext', 'autoreload')
