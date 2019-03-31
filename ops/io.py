@@ -122,6 +122,10 @@ def save_stack(name, data, luts=None, display_ranges=None,
     if data.dtype == np.bool:
         data = 255 * data.astype(np.uint8)
 
+    if data.dtype == np.int32:
+        if data.min() >= 0 & data.max() < 2**16:
+            data = data.astype(np.uint16)
+
     if not data.dtype in (np.uint8, np.uint16, np.float32):
         raise ValueError('Cannot save data of type %s' % data.dtype)
 
