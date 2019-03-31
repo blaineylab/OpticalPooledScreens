@@ -106,15 +106,13 @@ def get_vectors(X):
     Delaunay triangulation of point array `X`.
     """
     dt = Delaunay(X)
-    results = []
-    for i in range(dt.simplices.shape[0]):
-        # skip triangles with an edge on the outer boundary
-        if all(dt.neighbors[i] > -1):
-            results.append(nine_edge_hash(dt, i))
+    # skip triangles with an edge on the outer boundary
+    keep = (dt.neighbors > -1).all(axis=1)
+    results = [nine_edge_hash(dt, i) for i in range(dt.simplices.shape[0])]
     vectors = np.array([v for _, v in results])
     centers = np.vstack([X[dt.simplices, 0].mean(axis=1), 
                      X[dt.simplices, 1].mean(axis=1)]).T
-    return vectors.reshape(-1, 18), centers
+    return vectors.reshape(-1, 18)[keep], centers[keep]
 
 def nearest_neighbors(V_0, V_1):
     Y = cdist(V_0, V_1)
