@@ -82,7 +82,7 @@ class Snake():
         offsets = [offset] * len(data_2)
         aligned = ops.process.Align.apply_offsets(data_2, offsets)
         return aligned
-
+        
     @staticmethod
     def _segment_nuclei(data, threshold, area_min, area_max):
         """Find nuclei from DAPI. Find cell foreground from aligned but unfiltered 
@@ -103,6 +103,21 @@ class Snake():
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             nuclei = ops.process.find_nuclei(dapi, **kwargs)
+        return nuclei.astype(np.uint16)
+
+    @staticmethod
+    def _segment_nuclei_stack(dapi, threshold, area_min, area_max):
+        """Find nuclei from a nuclear stain (e.g., DAPI). Expects data to have shape (I, J) 
+        (segments one image) or (N, I, J) (segments a series of DAPI images).
+        """
+        kwargs = dict(threshold=lambda x: threshold, 
+            area_min=area_min, area_max=area_max)
+
+        find_nuclei = ops.utils.applyIJ(ops.process.find_nuclei)
+        # skimage precision warning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            nuclei = find_nuclei(dapi, **kwargs)
         return nuclei.astype(np.uint16)
 
     @staticmethod
@@ -370,32 +385,19 @@ class Snake():
                     threshold_peaks=threshold_peaks, wildcards=wildcards))
 
     @staticmethod
-    def _track_live_nuclei(data, threshold=800, area_lim=(100, 500), 
-        radius=50, tolerance_per_frame=5):
+    def _track_live_nuclei(nuclei, tolerance_per_frame=5):
         
         import ops.timelapse
-        data = np.squeeze(data)
-
-        # segment nuclei
-        arr = []
-        for dapi in data[:, 0]:
-            arr += [ops.process.find_nuclei(dapi, 
-                            threshold=lambda x: threshold, 
-                            radius=radius, area_min=area_lim[0],
-                            area_max=area_lim[1])]
-        nuclei = np.array(arr)
-
-        # return nuclei
 
         # nuclei coordinates
         arr = []
-        for i, (frame, nuclei_frame) in enumerate(zip(data, nuclei)):
+        for i, nuclei_frame in enumerate(nuclei):
             extract = Snake._extract_phenotype_minimal
-            arr += [extract(frame, nuclei_frame, {'frame': i})]
+            arr += [extract(nuclei_frame, nuclei_frame, {'frame': i})]
         df_nuclei = pd.concat(arr)
 
         # track nuclei
-        motion_threshold = len(data) * tolerance_per_frame
+        motion_threshold = len(nuclei) * tolerance_per_frame
         G = (df_nuclei
           .rename(columns={'cell': 'label'})
           .pipe(ops.timelapse.initialize_graph)

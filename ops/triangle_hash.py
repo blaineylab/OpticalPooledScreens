@@ -8,8 +8,12 @@ from sklearn.linear_model import RANSACRegressor
 def process(df):
     v, c = get_vectors(df[['i', 'j']].values)
 
-    df_ = pd.concat([pd.DataFrame(v).rename(columns='V_{0}'.format), 
-               pd.DataFrame(c).rename(columns='c_{0}'.format)], axis=1)
+    return (pd.concat([
+        pd.DataFrame(v).rename(columns='V_{0}'.format), 
+        pd.DataFrame(c).rename(columns='c_{0}'.format)], axis=1)
+        .assign(magnitude=lambda x: x.eval('(V_0**2 + V_1**2)**0.5'))
+    )
+
     return df_
 
 def nine_edge_hash(dt, i):
@@ -106,15 +110,13 @@ def get_vectors(X):
     Delaunay triangulation of point array `X`.
     """
     dt = Delaunay(X)
-    results = []
-    for i in range(dt.simplices.shape[0]):
-        # skip triangles with an edge on the outer boundary
-        if all(dt.neighbors[i] > -1):
-            results.append(nine_edge_hash(dt, i))
+    # skip triangles with an edge on the outer boundary
+    keep = (dt.neighbors > -1).all(axis=1)
+    results = [nine_edge_hash(dt, i) for i in range(dt.simplices.shape[0])]
     vectors = np.array([v for _, v in results])
     centers = np.vstack([X[dt.simplices, 0].mean(axis=1), 
                      X[dt.simplices, 1].mean(axis=1)]).T
-    return vectors.reshape(-1, 18), centers
+    return vectors.reshape(-1, 18)[keep], centers[keep]
 
 def nearest_neighbors(V_0, V_1):
     Y = cdist(V_0, V_1)
@@ -123,9 +125,12 @@ def nearest_neighbors(V_0, V_1):
     ix_1 = Y.argmin(axis=1)
     return ix_0, ix_1, distances
 
-def get_vc(df):
-    return (df.filter(like='V').values, 
+def get_vc(df, normalize=True):
+    V,c = (df.filter(like='V').values, 
             df.filter(like='c').values)
+    if normalize:
+        V = V / df['magnitude'].values[:, None]
+    return V, c
 
 def compare_positions(df_0, df_1):
     V_0, c_0 = get_vc(df_0)

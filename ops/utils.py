@@ -1,4 +1,5 @@
 import functools
+import multiprocessing
 
 from string import Formatter
 from itertools import product
@@ -245,7 +246,6 @@ def csv_frame(files_or_search, tqdn=False):
     glob wildcard search term.
     """
     from natsort import natsorted
-    import pandas as pd
     
     def read_csv(f):
         try:
@@ -263,6 +263,25 @@ def csv_frame(files_or_search, tqdn=False):
         return pd.concat([read_csv(f) for f in tqdn(files)], sort=True)
     else:
         return pd.concat([read_csv(f) for f in files], sort=True)
+
+
+def apply_parallel(grouped, func, index_name='index', cpu_count=None, tqdn=True):
+    if cpu_count is None:
+        cpu_count = multiprocessing.cpu_count()
+
+
+    with multiprocessing.Pool(cpu_count) as p:
+        names, work = zip(*grouped)
+
+        if tqdn:
+            from tqdm import tqdm_notebook as tqdn
+            results = list(tqdn(p.imap(func, work), total=len(work)))
+        else:
+            results = list(p.imap(func, work), total=len(work))
+
+    results = [x.assign(**{index_name: n}).set_index(index_name) 
+                for n, x in zip(names, results)]
+    return pd.concat(results)
 
 
 # NUMPY
