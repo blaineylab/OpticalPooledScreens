@@ -8,8 +8,12 @@ from sklearn.linear_model import RANSACRegressor
 def process(df):
     v, c = get_vectors(df[['i', 'j']].values)
 
-    df_ = pd.concat([pd.DataFrame(v).rename(columns='V_{0}'.format), 
-               pd.DataFrame(c).rename(columns='c_{0}'.format)], axis=1)
+    return (pd.concat([
+        pd.DataFrame(v).rename(columns='V_{0}'.format), 
+        pd.DataFrame(c).rename(columns='c_{0}'.format)], axis=1)
+        .assign(magnitude=lambda x: x.eval('(V_0**2 + V_1**2)**0.5'))
+    )
+
     return df_
 
 def nine_edge_hash(dt, i):
@@ -121,9 +125,12 @@ def nearest_neighbors(V_0, V_1):
     ix_1 = Y.argmin(axis=1)
     return ix_0, ix_1, distances
 
-def get_vc(df):
-    return (df.filter(like='V').values, 
+def get_vc(df, normalize=True):
+    V,c = (df.filter(like='V').values, 
             df.filter(like='c').values)
+    if normalize:
+        V = V / df['magnitude'].values[:, None]
+    return V, c
 
 def compare_positions(df_0, df_1):
     V_0, c_0 = get_vc(df_0)
