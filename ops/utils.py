@@ -329,7 +329,7 @@ def make_tiles(arr, m, n, pad=None):
     tiled = []
     for x in np.array_split(arr[:h_, :w_], m_, axis=-2):
         for y in np.array_split(x, n_, axis=-1):
-            result.append(y)
+            tiled.append(y)
     
     return tiled
 
