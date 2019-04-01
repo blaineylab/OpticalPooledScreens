@@ -245,6 +245,9 @@ def index_singleton_clusters(clusters):
 
 
 def join_by_cell_location(df_cells, df_ph, max_distance=4):
+    """Can speed up over independent fields of view with 
+    `ops.utils.groupby_apply2`.
+    """
     from scipy.spatial.kdtree import KDTree
     # df_cells = df_cells.sort_values(['well', 'tile', 'cell'])
     # df_ph = df_ph.sort_values(['well', 'tile', 'cell'])
