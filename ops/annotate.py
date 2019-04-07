@@ -29,7 +29,7 @@ def annotate_labels(df, label, value, label_mask=None, tag='cells', outline=Fals
     if df[label].duplicated().any():
         raise ValueError('duplicate rows present')
 
-    label_to_value = df.set_index(label)[value]
+    label_to_value = df.set_index(label, drop=False)[value]
     index_dtype = label_to_value.index.dtype
     value_dtype = label_to_value.dtype
     if not np.issubdtype(index_dtype, np.integer):
