@@ -308,3 +308,93 @@ def merge_sbs_phenotype(df_sbs_, df_ph_, model):
      .assign(distance=distances.min(axis=1)[filt])
      [cols_final]
     )
+
+
+def plot_alignments(df_ph, df_sbs, df_align, site):
+    """Filter for one well first.
+    """
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+    X_0 = df_ph.query('site == @site')[['i', 'j']].values
+    ax.scatter(X_0[:, 0], X_0[:, 1], s=10)
+    
+    it = (df_align
+          .query('site == @site')
+          .sort_values('score', ascending=False)
+          .iterrows())
+    
+    for _, row in it:
+        tile = row['tile']
+        X = df_sbs.query('tile == @tile')[['i', 'j']].values
+        model = build_linear_model(row['rotation'], row['translation'])
+        Y = model.predict(X)
+        ax.scatter(Y[:, 0], Y[:, 1], s=1, label=tile)
+        print(tile)
+
+    ax.set_xlim([-50, 1550])
+    ax.set_ylim([-50, 1550])
+    
+    return ax
+
+
+def multistep_alignment(df_0, df_1, df_info_0, df_info_1, 
+                        initial_sites=6, batch_size=180):
+    """Provide triangles from one well only.
+    """
+    sites = list(np.random.choice(df_info_1.index, size=initial_sites, 
+                                  replace=False))
+    df_initial = brute_force_pairs(df_0, df_1.query('site == @sites'))
+
+    # dets = df_initial.query('score > 0.3')['determinant']
+    # d0, d1 = dets.min(), dets.max()
+    # delta = (d1 - d0)
+    # d0 -= delta * 1.5
+    # d1 += delta * 1.5
+
+    d0, d1 = 1.125, 1.186
+    gate = '@d0 <= determinant <= @d1 & score > 0.1'
+
+    alignments = [df_initial.query(gate)]
+
+    #### iteration
+
+    def work_on(df_t, df_s):
+        rotation, translation, score = evaluate_match(df_t, df_s)
+        determinant = None if rotation is None else np.linalg.det(rotation)
+        result = pd.Series({'rotation': rotation, 
+                            'translation': translation, 
+                            'score': score, 
+                            'determinant': determinant})
+        return result
+
+    batch_size = 180
+
+    while True:
+        df_align = (pd.concat(alignments, sort=True)
+                    .drop_duplicates(['tile', 'site']))
+
+        tested = df_align.reset_index()[['tile', 'site']].values
+        matches = (df_align.query(gate).reset_index()[['tile', 'site']].values)
+        candidates = prioritize(df_info_0, df_info_1, matches)
+        candidates = remove_overlap(candidates, tested)
+
+        print('matches so far: {0} / {1}'.format(
+            len(matches), df_align.shape[0]))
+
+        work = []
+        d_0 = dict(list(df_0.groupby('tile')))
+        d_1 = dict(list(df_1.groupby('site')))
+        for ix_0, ix_1 in candidates[:batch_size]:
+            work += [[d_0[ix_0], d_1[ix_1]]]    
+
+        df_align_new = (pd.concat(parallel_process(work_on, work, 18), axis=1).T
+         .assign(tile=[t for t, _ in candidates[:batch_size]], 
+                 site=[s for _, s in candidates[:batch_size]])
+        )
+
+        alignments += [df_align_new]
+        if len(df_align_new.query(gate)) == 0:
+            break
+            
+    return df_align
