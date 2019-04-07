@@ -265,23 +265,41 @@ def csv_frame(files_or_search, tqdn=False):
         return pd.concat([read_csv(f) for f in files], sort=True)
 
 
-def apply_parallel(grouped, func, index_name='index', cpu_count=None, tqdn=True):
-    if cpu_count is None:
-        cpu_count = multiprocessing.cpu_count()
+def gb_apply_parallel(df, cols, func, n_jobs=None, tqdn=True):
+    if isinstance(cols, str):
+        cols = [cols]
 
+    from joblib import Parallel, delayed
+    if n_jobs is None:
+        import multiprocessing
+        n_jobs = multiprocessing.cpu_count() - 1
 
-    with multiprocessing.Pool(cpu_count) as p:
-        names, work = zip(*grouped)
+    grouped = df.groupby(cols)
+    names, work = zip(*grouped)
+    if tqdn:
+        from tqdm import tqdm_notebook 
+        work = tqdm_notebook(work, str(cols))
+    results = Parallel(n_jobs=n_jobs)(delayed(func)(w) for w in work)
 
-        if tqdn:
-            from tqdm import tqdm_notebook as tqdn
-            results = list(tqdn(p.imap(func, work), total=len(work)))
+    if isinstance(results[0], pd.DataFrame):
+        arr = []
+        for labels, df in zip(names, results):
+            (df.assign(**{c: l for c, l in zip(cols, labels)})
+                .pipe(arr.append))
+        results = pd.concat(arr)
+    elif isinstance(results[0], pd.Series):
+        if len(cols) == 1:
+            results = (pd.concat(results, axis=1).T
+                .assign(**{cols[0]: names}))
         else:
-            results = list(p.imap(func, work), total=len(work))
+            labels = zip(*names)
+            results = (pd.concat(results, axis=1).T
+                .assign(**{c: l for c,l in zip(cols, labels)}))
 
-    results = [x.assign(**{index_name: n}).set_index(index_name) 
-                for n, x in zip(names, results)]
-    return pd.concat(results)
+    elif isinstance(results[0], dict):
+        results = pd.DataFrame(results, index=pd.Index(names, name=cols)).reset_index()
+
+    return results
 
 
 # NUMPY
