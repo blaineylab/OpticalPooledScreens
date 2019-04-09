@@ -1,13 +1,15 @@
-from ops.constants import *
-import ops.filenames
-import ops
 import numpy as np
-import ops.io
+import pandas as pd
 import skimage.morphology
 import warnings
 import os
 import PIL.Image
 import PIL.ImageFont
+
+from ops.constants import *
+import ops.filenames
+import ops
+import ops.io
 
 
 # load font
@@ -202,7 +204,7 @@ def add_rect_bounds(df, width=10, ij='ij', bounds_col='bounds'):
 # BASE LABELING
 
 colors = (0, 0, 0), (0, 1, 0), (1, 0, 0), (1, 0, 1), (0, 1, 1)
-BASE_LUT = ops.annotate.build_discrete_lut(colors)
+GRMC = build_discrete_lut(colors)
 
 """
 labels = (df_reads
@@ -229,7 +231,7 @@ def add_base_codes(df_reads, offset=1):
 def label_bases(df_reads):
     n = len(df_reads['barcode'].iloc[0])
     cycles = ['c{0}'.format(i+1) for i in range(n)]
-    labels = np.array([annotate_points(df, c) for c in cycles])
+    labels = np.array([annotate_points(df_reads, c) for c in cycles])
     return labels
 
 
