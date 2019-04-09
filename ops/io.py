@@ -64,9 +64,7 @@ def grid_view(files, bounds, padding=40, with_mask=False):
 def read_stack(filename, copy=True):
     """Read a .tif file into a numpy array, with optional memory mapping.
     """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="not an ome-tiff master file")
-        data = imread(filename, multifile=False)
+    data = imread(filename, multifile=False, is_ome=False)
     # preserve inner singleton dimensions
     while data.shape[0] == 1:
         data = np.squeeze(data, axis=(0,))
