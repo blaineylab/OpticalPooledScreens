@@ -7,7 +7,9 @@ import warnings
 
 import ops.utils
 import ops.constants
-from ops.external.tifffile_old import imsave, imread
+from ops.external.tifffile_new import imread
+# currently needed to save ImageJ-compatible hyperstacks
+from ops.external.tifffile_old import imsave
 
 imagej_description = ''.join(['ImageJ=1.49v\nimages=%d\nchannels=%d\nslices=%d',
                               '\nframes=%d\nhyperstack=true\nmode=composite',
