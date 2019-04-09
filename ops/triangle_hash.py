@@ -147,43 +147,6 @@ def get_vc(df, normalize=True):
         V = V / df['magnitude'].values[:, None]
     return V, c
 
-def compare_positions(df_0, df_1):
-    V_0, c_0 = get_vc(df_0)
-    V_1, c_1 = get_vc(df_1)
-
-    i0, i1, distances = nearest_neighbors(V_0, V_1)
-
-    model = RANSACRegressor(random_state=0, min_samples=10, residual_threshold=30)
-
-    # default model (LinearRegression) fits 2x2 matrix (rotation and scaling)
-    # and intercept (translation)
-    X = c_0[i0]
-    Y = c_1[i1]
-    model.fit(X, Y)
-    
-    rotation = model.estimator_.coef_
-    translation = model.estimator_.intercept_
-    inliers = model.inlier_mask_
-    
-    # analyze inliers
-    inlier_count = model.inlier_mask_.sum()
-    score = model.score(X, Y)
-
-    guess = model.predict(X) 
-    error = np.linalg.norm(guess - Y, axis=1)
-    hits = error < 2
-    
-    return rotation, translation, inliers, hits, model
-
-def query_points(df_query, df_target, n):
-    df_0 = df_query.sample(n, random_state=0)
-    df_1 = df_target
-    rotation, translation, inliers, hits = compare_positions(df_0, df_1)
-    return {'translation': translation, 
-            'rotation': rotation,
-            'inliers': inliers.sum(), 
-            'hits': hits.sum()}
-
 def evaluate_match(df_0, df_1, threshold_triangle=0.3, threshold_point=2):
     
     V_0, c_0 = get_vc(df_0)
