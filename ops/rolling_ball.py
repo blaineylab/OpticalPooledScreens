@@ -64,7 +64,7 @@ def subtract_background(image, radius, shrink_factor=None, ball=None,
     import warnings
 
     if ball is None:
-        ball = make_ball(radius)
+        ball = make_ball(radius).astype(image.dtype)
         shrink_factor_, trim = imagej_heuristic(radius)
 
         n = int(ball.shape[0] * trim)
