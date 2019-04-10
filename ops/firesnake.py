@@ -387,6 +387,13 @@ class Snake():
     @staticmethod
     def _track_live_nuclei(nuclei, tolerance_per_frame=5):
         
+        # if there are no nuclei, we will have problems
+        count = nuclei.max(axis=(-2, -1))
+        if (count == 0).any():
+            error = 'no nuclei detected in frames: {}'
+            print(error.format(np.where(count == 0)))
+            return np.zeros_like(nuclei)
+
         import ops.timelapse
 
         # nuclei coordinates
