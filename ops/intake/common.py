@@ -7,6 +7,14 @@ from itertools import product
 
 from ops.constants import *
 
+ND2_EXPORT_FILE_PATTERN = ('.*'
+        r'Well(?P<well_ix>\d+)_.*'
+        r'Seq(?P<seq>\d+).*?'
+        r'(?P<mag>\d+X).'    
+        r'(?:(?P<cycle>[^_\.]*)_)?.*'
+        r'(?P<m>\d{4})'                   
+        r'(?:\.(?P<tag>.*))*\.(?P<ext>.*)')
+
 def add_neighbors(df_info, num_neighbors=9, radius_leniency=10):
     xy = ['x_um', 'y_um']
     xy = [GLOBAL_X, GLOBAL_Y]
