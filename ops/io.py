@@ -202,10 +202,10 @@ def infer_luts_display_ranges(data, luts, display_ranges):
 
 def single_contrast(data, display_ranges):
     try:
-        contrast = np.array(display_ranges).flatten()[:2]
+        min, max = np.array(display_ranges).flat[:2]
     except ValueError:
-        contrast = data.min(), data.max()
-    return contrast
+        min, max = data.min(), data.max()
+    return min, max
 
 
 def imagej_description_2D(min, max):
