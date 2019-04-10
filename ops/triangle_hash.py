@@ -305,8 +305,10 @@ def multistep_alignment(df_0, df_1, df_info_0, df_info_1,
                         initial_sites=6, batch_size=180):
     """Provide triangles from one well only.
     """
-    sites = list(np.random.choice(df_info_1.index, size=initial_sites, 
-                                  replace=False))
+    sites = (pd.Series(df_info_1.index)
+        .sample(initial_sites, replace=False, random_state=0)
+        .pipe(list))
+    
     df_initial = brute_force_pairs(df_0, df_1.query('site == @sites'))
 
     # dets = df_initial.query('score > 0.3')['determinant']
