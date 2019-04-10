@@ -344,7 +344,7 @@ class Snake():
         extract = _extract_phenotype_translocation_simple
         arr = []
         for i, (frame, nuclei_frame) in enumerate(zip(data, nuclei)):
-            print(i)
+            print(frame.sum(), nuclei_frame.sum())
             arr += [extract(frame, nuclei_frame, wildcards).assign(frame=i)]
 
         return pd.concat(arr)
