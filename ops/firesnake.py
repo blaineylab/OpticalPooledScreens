@@ -538,6 +538,7 @@ def load_pkl(filename):
 
 
 def load_tif(filename):
+    print(filename)
     return ops.io.read_stack(filename)
 
 
