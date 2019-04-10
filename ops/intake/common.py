@@ -15,6 +15,14 @@ ND2_EXPORT_FILE_PATTERN = ('.*'
         r'(?P<m>\d{4})'                   
         r'(?:\.(?P<tag>.*))*\.(?P<ext>.*)')
 
+ND2_EXPORT_FILE_PATTERN_96 = ('.*'
+        r'Well(?P<well>.\d\d)_.*'
+        r'Seq(?P<seq>\d+).*?'
+        r'(?P<mag>\d+X).'    
+        r'(?:(?P<cycle>[^_\.]*)_)?.*'
+        r'(?P<m>\d{4})'                   
+        r'(?:\.(?P<tag>.*))*\.(?P<ext>.*)')
+
 def add_neighbors(df_info, num_neighbors=9, radius_leniency=10):
     xy = ['x_um', 'y_um']
     xy = [GLOBAL_X, GLOBAL_Y]
