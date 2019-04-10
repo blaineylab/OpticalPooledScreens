@@ -32,6 +32,7 @@ def read_lut(lut_string):
     return (pd.read_csv(six.StringIO(lut_string), sep='\s+', header=None)
     	.values.T.flatten())
 
+
 GLASBEY = read_lut(ops.constants.GLASBEY_INVERTED)
 
 
@@ -76,9 +77,8 @@ def read_stack(filename, copy=True):
     return data
 
 
-# TODO fix extension of luts and display_ranges when not provided
 def save_stack(name, data, luts=None, display_ranges=None, 
-               resolution=1., compress=0):
+               resolution=1., compress=0, dimensions=None):
     """
     Saves `data`, an array with 5, 4, 3, or 2 dimensions [TxZxCxYxX]. `resolution` 
     can be specified in microns per pixel. Setting `compress` to 1 saves a lot of 
@@ -106,8 +106,9 @@ def save_stack(name, data, luts=None, display_ranges=None,
     if isinstance(data, list):
         data = np.array(data)
 
-    if data.ndim == 2:
-        data = data[None]
+    if not (2 <= data.ndim <= 5):
+        error = 'Input has shape {}, but number of dimensions must be in range [2, 5]'
+        raise ValueError(error.format(data.shape))
 
     if (data.dtype == np.int64):
         if (data>=0).all() and (data<2**16).all():
@@ -117,7 +118,7 @@ def save_stack(name, data, luts=None, display_ranges=None,
             print('Cast int64 to float32')
     if data.dtype == np.float64:
         data = data.astype(np.float32)
-        print('Cast float64 to float32')
+        # print('Cast float64 to float32')
 
     if data.dtype == np.bool:
         data = 255 * data.astype(np.uint8)
@@ -125,63 +126,114 @@ def save_stack(name, data, luts=None, display_ranges=None,
     if data.dtype == np.int32:
         if data.min() >= 0 & data.max() < 2**16:
             data = data.astype(np.uint16)
+        else:
+            raise ValueError('error casting from np.int32 to np.uint16, ' 
+                'data out of range')
 
     if not data.dtype in (np.uint8, np.uint16, np.float32):
         raise ValueError('Cannot save data of type %s' % data.dtype)
 
-    nchannels = data.shape[-3]
-
     resolution = (1./resolution,)*2
-
-    if luts is None:
-        luts = DEFAULT_LUTS + (GRAY,) * nchannels
-
-    if display_ranges is None:
-        display_ranges = [None] * data.shape[-3]
-    for i, dr in enumerate(display_ranges):
-        if dr is None:
-            x = data[..., i, :, :]
-            display_ranges[i] = x.min(), x.max()
-
-    try:
-        luts = luts[:nchannels]
-        display_ranges = display_ranges[:nchannels]
-    except IndexError:
-        raise IndexError('Must provide at least %d luts and display ranges' % nchannels)
-
-    # metadata encoding LUTs and display ranges
-    # see http://rsb.info.nih.gov/ij/developer/source/ij/io/TiffEncoder.java.html
-    description = ij_description(data.shape)
-    tag_50838 = ij_tag_50838(nchannels)
-    tag_50839 = ij_tag_50839(luts, display_ranges)
 
     if not os.path.isdir(os.path.dirname(name)):
         os.makedirs(os.path.dirname(name))
 
-    imsave(name, data, photometric='minisblack',
-           description=description, resolution=resolution, compress=compress,
-           extratags=[(50838, 'I', len(tag_50838), tag_50838, True),
-                      (50839, 'B', len(tag_50839), tag_50839, True),
-                      ])
+    if data.ndim == 2:
+        # simple description
+        min, max = single_contrast(data, display_ranges)
+        description = imagej_description_2D(min, max)
+        imsave(name, data, photometric='minisblack',
+           description=description, resolution=resolution, compress=compress)
+    else:
+        # hyperstack description
+        nchannels = data.shape[-3]
+        luts, display_ranges = infer_luts_display_ranges(data, luts, 
+                                                        display_ranges)
+
+        leading_shape = data.shape[:-2]
+        if dimensions is None:
+            dimensions = 'TZC'[::-1][:len(leading_shape)][::-1]
+
+        if 'C' not in dimensions:
+            # TODO: support lut
+            contrast = single_contrast(data, display_ranges)
+            description = imagej_description(leading_shape, dimensions, 
+                                    contrast=contrast)
+            imsave(name, data, photometric='minisblack',
+               description=description, resolution=resolution, compress=compress)
+        else:
+            # the full monty
+            description = imagej_description(leading_shape, dimensions)
+            # metadata encoding LUTs and display ranges
+            # see http://rsb.info.nih.gov/ij/developer/source/ij/io/TiffEncoder.java.html
+            tag_50838 = ij_tag_50838(nchannels)
+            tag_50839 = ij_tag_50839(luts, display_ranges)
+
+            imsave(name, data, photometric='minisblack', description=description, 
+                    resolution=resolution, compress=compress,
+                    extratags=[(50838, 'I', len(tag_50838), tag_50838, True),
+                               (50839, 'B', len(tag_50839), tag_50839, True),
+                               ])
 
 
-def ij_description(shape):
-    """Format ImageJ description for hyperstack.
-    :param shape:
-    :return:
+def infer_luts_display_ranges(data, luts, display_ranges):
+    """Deal with user input.
     """
-    s = shape[:-2]
-    if not s:
-        return imagej_description % (1, 1, 1, 1)
-    n = np.prod(s)
-    if len(s) == 3:
-        return imagej_description % (n, s[2], s[1], s[0])
-    if len(s) == 2:
-        return imagej_description % (n, s[1], s[0], 1)
-    if len(s) == 1:
-        return imagej_description % (n, s[0], 1, 1)
-    # bad shape
-    assert False
+    nchannels = data.shape[-3]
+    if luts is None:
+        luts = DEFAULT_LUTS + (GRAY,) * (nchannels - len(DEFAULT_LUTS))
+
+    if display_ranges is None:
+        display_ranges = [None] * data.shape[-3]
+
+    for i, dr in enumerate(display_ranges):
+        if dr is None:
+            x = data[..., i, :, :]
+            display_ranges[i] = x.min(), x.max()
+    try:
+        luts = luts[:nchannels]
+        display_ranges = display_ranges[:nchannels]
+    except IndexError:
+        error = 'Must provide at least {} luts and display ranges'
+        raise IndexError(error.format(nchannels))
+
+    return luts, display_ranges
+
+
+def single_contrast(data, display_ranges):
+    try:
+        contrast = np.array(display_ranges).flatten()[:2]
+    except ValueError:
+        contrast = data.min(), data.max()
+    return contrast
+
+
+def imagej_description_2D(min, max):
+    return 'ImageJ=1.49v\nimages=1\nmin={min}\nmax={max}'.format(min=min, max=max)
+
+
+def imagej_description(leading_shape, leading_axes, contrast=None):
+    if len(leading_shape) != len(leading_axes):
+        error = 'mismatched axes, shape is {} but axis labels are {}'
+        raise ValueError(error.format(leading_shape, leading_axes))
+
+    prefix = 'ImageJ=1.49v\n'
+    suffix = 'hyperstack=true\nmode=composite\n'
+    images = np.prod(leading_shape)
+    sizes = {k: v for k,v in zip(leading_axes, leading_shape)}
+    description = prefix + 'images={}\n'.format(images)
+    if 'C' in sizes:
+        description += 'channels={}\n'.format(sizes['C'])
+    if 'Z' in sizes:
+        description += 'slices={}\n'.format(sizes['Z'])
+    if 'T' in sizes:
+        description += 'frames={}\n'.format(sizes['T'])
+    if contrast is not None:
+        min, max = contrast
+        description += 'min={0}\nmax={1}\n'.format(min, max)
+    description += suffix
+
+    return description
 
 
 def ij_tag_50838(nchannels):
