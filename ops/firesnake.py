@@ -344,7 +344,6 @@ class Snake():
         extract = _extract_phenotype_translocation_simple
         arr = []
         for i, (frame, nuclei_frame) in enumerate(zip(data, nuclei)):
-            print(frame.sum(), nuclei_frame.sum())
             arr += [extract(frame, nuclei_frame, wildcards).assign(frame=i)]
 
         return pd.concat(arr)
@@ -538,7 +537,6 @@ def load_pkl(filename):
 
 
 def load_tif(filename):
-    print(filename)
     return ops.io.read_stack(filename)
 
 
