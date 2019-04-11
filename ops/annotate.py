@@ -206,21 +206,8 @@ def add_rect_bounds(df, width=10, ij='ij', bounds_col='bounds'):
 colors = (0, 0, 0), (0, 1, 0), (1, 0, 0), (1, 0, 1), (0, 1, 1)
 GRMC = build_discrete_lut(colors)
 
-"""
-labels = (df_reads
- .pipe(add_base_codes)
- .pipe(label_bases)
- )
 
-data = read('process/10X_A1_Tile-7.log.tif')
-labeled = join_stacks(data, (labels[:, None], '.a'))
-
-luts = GRAY, GREEN, RED, MAGENTA, CYAN, base_lut 
-save('test/labeled', labeled, luts=luts)
-"""
-
-def add_base_codes(df_reads, offset=1):
-    bases = 'GTAC'
+def add_base_codes(df_reads, bases, offset):
     n = len(df_reads['barcode'].iloc[0])
     df = (df_reads['barcode'].str.extract('(.)'*n)
           .applymap(bases.index)
@@ -228,7 +215,21 @@ def add_base_codes(df_reads, offset=1):
          )
     return pd.concat([df_reads, df + offset], axis=1)
 
-def label_bases(df_reads):
+def label_bases(df_reads, bases='GTAC', offset=1):
+    """
+    from ops.annotate import add_base_codes, label_bases, GRMC
+    labels = (df_reads
+     .pipe(add_base_codes)
+     .pipe(label_bases)
+     )
+
+    data = read('process/10X_A1_Tile-7.log.tif')
+    labeled = join_stacks(data, (labels[:, None], '.a'))
+
+    luts = GRAY, GREEN, RED, MAGENTA, CYAN, GRMC 
+    save('test/labeled', labeled, luts=luts)
+    """
+    df_reads = add_base_codes(df_reads)
     n = len(df_reads['barcode'].iloc[0])
     cycles = ['c{0}'.format(i+1) for i in range(n)]
     labels = np.array([annotate_points(df_reads, c) for c in cycles])
