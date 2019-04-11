@@ -234,6 +234,12 @@ def cast_cols(df, int_cols=tuple(), float_cols=tuple(), str_cols=tuple()):
            )
 
 
+def replace_cols(df, **kwargs):
+    return (df
+           .assign(**{k: lambda x: x[k].apply(v) 
+                      for k,v in kwargs.items()}))
+
+
 def expand_sep(df, col, sep=','):
     """Expands table by splitting strings. Drops index.
     """
