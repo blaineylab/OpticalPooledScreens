@@ -31,7 +31,7 @@ from ops.utils import or_join, and_join
 from ops.utils import groupby_reduce_concat, groupby_histogram, replace_cols
 from ops.utils import pile, montage, make_tiles, trim, join_stacks, csv_frame
 
-from ops.annotate import annotate_labels, annotate_points, label_bases
+from ops.annotate import annotate_labels, annotate_points, annotate_bases
 
 from ops.plates import add_global_xy, add_row_col
 

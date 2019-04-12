@@ -65,7 +65,7 @@ def annotate_points(df, value, ij=('i', 'j'), width=3, shape=(1024, 1024)):
     """Create a mask with pixels at coordinates `ij` set to `value` from 
     dataframe `df`. 
     """
-    ij = df[list(ij)].values
+    ij = df[list(ij)].values.astype(int)
     n = ij.shape[0]
     mask = np.zeros(shape, dtype=df[value].dtype)
     mask[ij[:, 0], ij[:, 1]] = df[value]
@@ -207,21 +207,19 @@ colors = (0, 0, 0), (0, 1, 0), (1, 0, 0), (1, 0, 1), (0, 1, 1)
 GRMC = build_discrete_lut(colors)
 
 
-def add_base_codes(df_reads, bases, offset):
-    n = len(df_reads['barcode'].iloc[0])
-    df = (df_reads['barcode'].str.extract('(.)'*n)
+def add_base_codes(df_reads, bases, offset, col):
+    n = len(df_reads[col].iloc[0])
+    df = (df_reads[col].str.extract('(.)'*n)
           .applymap(bases.index)
           .rename(columns=lambda x: 'c{0}'.format(x+1))
          )
     return pd.concat([df_reads, df + offset], axis=1)
 
-def label_bases(df_reads, bases='GTAC', offset=1):
+def annotate_bases(df_reads, col='barcode', bases='GTAC', offset=1, **kwargs):
     """
     from ops.annotate import add_base_codes, label_bases, GRMC
-    labels = (df_reads
-     .pipe(add_base_codes)
-     .pipe(label_bases)
-     )
+    labels = annotate_bases(df_reads)
+    # labels = annotate_bases(df_cells, col='cell_barcode_0')
 
     data = read('process/10X_A1_Tile-7.log.tif')
     labeled = join_stacks(data, (labels[:, None], '.a'))
@@ -229,10 +227,10 @@ def label_bases(df_reads, bases='GTAC', offset=1):
     luts = GRAY, GREEN, RED, MAGENTA, CYAN, GRMC 
     save('test/labeled', labeled, luts=luts)
     """
-    df_reads = add_base_codes(df_reads)
-    n = len(df_reads['barcode'].iloc[0])
+    df_reads = add_base_codes(df_reads, bases, offset, col)
+    n = len(df_reads[col].iloc[0])
     cycles = ['c{0}'.format(i+1) for i in range(n)]
-    labels = np.array([annotate_points(df_reads, c) for c in cycles])
+    labels = np.array([annotate_points(df_reads, c, **kwargs) for c in cycles])
     return labels
 
 
