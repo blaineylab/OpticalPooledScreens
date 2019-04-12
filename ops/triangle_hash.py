@@ -134,8 +134,8 @@ def get_vectors(X):
     return np.array(vectors).reshape(-1, 18), np.array(centers)
 
 def nearest_neighbors(V_0, V_1):
-    Y = cdist(V_0, V_1)
-    distances = Y.min(axis=1)
+    Y = cdist(V_0, V_1, metric='sqeuclidean')
+    distances = np.sqrt(Y.min(axis=1))
     ix_0 = np.arange(V_0.shape[0])
     ix_1 = Y.argmin(axis=1)
     return ix_0, ix_1, distances
@@ -170,12 +170,12 @@ def evaluate_match(df_0, df_1, threshold_triangle=0.3, threshold_point=2):
     translation = model.estimator_.intercept_
     
     # score transformation based on triangle i,j centers
-    distances = cdist(model.predict(c_0), c_1)
+    distances = cdist(model.predict(c_0), c_1, metric='sqeuclidean')
     # could use a fraction of the data range or nearest neighbor 
     # distances within one point set
     threshold_region = 50
-    filt = distances.min(axis=0) < threshold_region
-    score = (distances.min(axis=0)[filt] < threshold_point).mean()
+    filt = np.sqrt(distances.min(axis=0)) < threshold_region
+    score = (np.sqrt(distances.min(axis=0))[filt] < threshold_point).mean()
     
     return rotation, translation, score
 
@@ -200,7 +200,7 @@ def prioritize(df_info_0, df_info_1, matches):
 
     # rank all pairs by distance
     predicted = model.predict(df_info_0.values)
-    distances = cdist(predicted, df_info_1)
+    distances = cdist(predicted, df_info_1, metric='sqeuclidean')
     ix = np.argsort(distances.flatten())
     ix_0, ix_1 = np.unravel_index(ix, distances.shape)
 
@@ -254,9 +254,9 @@ def merge_sbs_phenotype(df_sbs_, df_ph_, model):
 
     threshold = 2
 
-    distances = cdist(Y, Y_pred)
+    distances = cdist(Y, Y_pred, metric='sqeuclidean')
     ix = distances.argmin(axis=1)
-    filt = distances.min(axis=1) < threshold
+    filt = np.sqrt(distances.min(axis=1)) < threshold
     columns = {'site': 'site', 'cell_ph': 'cell_ph',
               'i': 'i_ph', 'j': 'j_ph',}
 
@@ -268,7 +268,7 @@ def merge_sbs_phenotype(df_sbs_, df_ph_, model):
      [list(columns.keys())]
      .rename(columns=columns)
      .pipe(lambda x: pd.concat([sbs, x], axis=1))
-     .assign(distance=distances.min(axis=1)[filt])
+     .assign(distance=np.sqrt(distances.min(axis=1))[filt])
      [cols_final]
     )
 
