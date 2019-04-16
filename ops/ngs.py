@@ -76,7 +76,7 @@ def calc_stats(df_hist, df_design):
 
 
 def identify_pool(df_hist, df_design):
-    cols = [SUBPOOL, 'spots_per_oligo']
+    cols = ['subpool', 'spots_per_oligo']
     return (df_hist
            .join(df_design.set_index('sgRNA')[cols], on='sgRNA')
            .pipe(add_design_rank, df_design)

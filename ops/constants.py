@@ -47,6 +47,7 @@ SGRNAS_PER_GENE = 'sgRNAs_per_gene'
 STIMULANT = 'stimulant'
 GENE_CLASS = 'gene_class'
 NM_ID = 'NM_id'
+REPLICATE = 'replicate'
 
 
 def loc(query):
