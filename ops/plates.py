@@ -45,9 +45,10 @@ def plate_coordinate(well, tile, well_spacing, grid_spacing, grid_shape):
     elif well_spacing.upper() == '6W':
         well_spacing = 39120
         
-    if grid_spacing.upper() == '10X':
+    # common spacings
+    if str(grid_spacing).upper() == '10X':
         delta = 1280
-    elif grid_spacing.upper() == '20X':
+    elif str(grid_spacing).upper() == '20X':
         delta = 640
     else:
         delta = grid_spacing
