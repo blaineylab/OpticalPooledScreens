@@ -98,7 +98,7 @@ def groupby_reduce_concat(gb, *args, **kwargs):
     arr = []
     for name, f in kwargs.items():
         if callable(f):
-            arr += [f(gb).rename(name)]
+            arr += [gb.apply(f).rename(name)]
         else:
             arr += [reductions[f](gb).rename(name)]
 
