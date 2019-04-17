@@ -261,7 +261,7 @@ def csv_frame(files_or_search, tqdn=False, **kwargs):
     
     def read_csv(f):
         try:
-            return pd.read_csv(f)
+            return pd.read_csv(f, **kwargs)
         except pd.errors.EmptyDataError:
             return None
     
@@ -272,9 +272,9 @@ def csv_frame(files_or_search, tqdn=False, **kwargs):
 
     if tqdn:
         from tqdm import tqdm_notebook as tqdn
-        return pd.concat([read_csv(f, **kwargs) for f in tqdn(files)], sort=True)
+        return pd.concat([read_csv(f) for f in tqdn(files)], sort=True)
     else:
-        return pd.concat([read_csv(f, **kwargs) for f in files], sort=True)
+        return pd.concat([read_csv(f) for f in files], sort=True)
 
 
 def gb_apply_parallel(df, cols, func, n_jobs=None, tqdn=True):
