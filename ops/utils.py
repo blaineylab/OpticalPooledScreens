@@ -253,7 +253,7 @@ def expand_sep(df, col, sep=','):
      .assign(**{col: values}))
 
 
-def csv_frame(files_or_search, tqdn=False):
+def csv_frame(files_or_search, tqdn=False, **kwargs):
     """Convenience function, pass either a list of files or a 
     glob wildcard search term.
     """
@@ -272,9 +272,9 @@ def csv_frame(files_or_search, tqdn=False):
 
     if tqdn:
         from tqdm import tqdm_notebook as tqdn
-        return pd.concat([read_csv(f) for f in tqdn(files)], sort=True)
+        return pd.concat([read_csv(f, **kwargs) for f in tqdn(files)], sort=True)
     else:
-        return pd.concat([read_csv(f) for f in files], sort=True)
+        return pd.concat([read_csv(f, **kwargs) for f in files], sort=True)
 
 
 def gb_apply_parallel(df, cols, func, n_jobs=None, tqdn=True):
