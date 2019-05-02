@@ -27,7 +27,7 @@ class Snake():
 
     @staticmethod
     def _align_SBS(data, method='DAPI', upsample_factor=2, window=2, cutoff=1,
-        align_within_cycle=True, keep_trailing=False):
+        align_within_cycle=True, keep_trailing=False, n=1):
         """Rigid alignment of sequencing cycles and channels. 
 
         Expects `data` to be an array with dimensions (CYCLE, CHANNEL, I, J).
@@ -46,12 +46,12 @@ class Snake():
         aligned = data.copy()
         if align_within_cycle:
             align_it = lambda x: Align.align_within_cycle(x, window=window, upsample_factor=upsample_factor)
-            if data.shape[1] == 4:
-                n = 0
-                align_it = lambda x: Align.align_within_cycle(x, window=window, 
-                    upsample_factor=upsample_factor, cutoff=cutoff)
-            else:
-                n = 1
+            # if data.shape[1] == 4:
+            #     n = 0
+            #     align_it = lambda x: Align.align_within_cycle(x, window=window, 
+            #         upsample_factor=upsample_factor, cutoff=cutoff)
+            # else:
+            #     n = 1
             
             aligned[:, n:] = np.array([align_it(x) for x in aligned[:, n:]])
             
