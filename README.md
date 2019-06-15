@@ -1,6 +1,6 @@
 ## Optical Pooled Screens
 
-This repository contains example _in situ_ sequencing-by-synthesis data (in `example_data/`) and analysis code (in `ops/`) for the manuscript *Pooled optical screens in human cells*, which is available on [Biorxiv](https://www.biorxiv.org/content/early/2018/08/02/383943).
+Example _in situ_ sequencing-by-synthesis data (in `example_data/`) and analysis code (in `ops/`) for the manuscript *Pooled optical screens in human cells*, available on [Biorxiv](https://www.biorxiv.org/content/early/2018/08/02/383943).
 
 
 ### Installation (OSX)
