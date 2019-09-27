@@ -414,6 +414,7 @@ def applyIJ(f, arr, *args, **kwargs):
     h, w = arr.shape[-2:]
     reshaped = arr.reshape((-1, h, w))
 
+    # kwargs are not actually getting passed in?
     arr_ = [f(frame, *args, **kwargs) for frame in reshaped]
 
     output_shape = arr.shape[:-2] + arr_[0].shape
@@ -431,10 +432,10 @@ def inscribe(mask):
     j_0, j_1 = 0, w - 1
     
     def edge_costs(i_0, i_1, j_0, j_1):
-        a = mask[i_0, j_0:j_1 + 1].sum()
-        b = mask[i_1, j_0:j_1 + 1].sum()
-        c = mask[i_0:i_1 + 1, j_0].sum()
-        d = mask[i_0:i_1 + 1, j_1].sum()  
+        a = mask[i_0, j_0:j_1 + 1].mean() # top
+        b = mask[i_1, j_0:j_1 + 1].mean() # bottom
+        c = mask[i_0:i_1 + 1, j_0].mean() # left
+        d = mask[i_0:i_1 + 1, j_1].mean() # right  
         return a,b,c,d
     
     def area(i_0, i_1, j_0, j_1):
@@ -447,8 +448,8 @@ def inscribe(mask):
             return coords
         worst = costs.index(max(costs))
         coords[worst] += 1 if worst in (0, 2) else -1
-    return
-
+        # print(costs, coords, worst)
+    return coords
 
 def subimage(stack, bbox, pad=0):
     """Index rectangular region from [...xYxX] stack with optional constant-width padding.
