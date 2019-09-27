@@ -167,7 +167,8 @@ class Snake():
             data = remove_channels(data, remove_index)
 
         leading_dims = tuple(range(0, data.ndim - 2))
-        consensus = np.std(data, axis=leading_dims)
+        # consensus = np.std(data, axis=leading_dims)
+        consensus = np.std(data, axis=0).mean(axis=0)
 
         return consensus
     
