@@ -134,10 +134,25 @@ class Align:
         """
         x1, x2 = np.percentile(data, [q1, q2])
         mask = (x1 > data) | (x2 < data)
+        return Align.fill_noise(data, mask, x1, x2)
+
+    @staticmethod
+    @ops.utils.applyIJ
+    def filter_values(data, x1, x2):
+        """Replaces data outside of value range [x1, x2]
+        with uniform noise over the range [x1, x2]. Useful for 
+        eliminating alignment artifacts due to bright features or 
+        regions of zeros.
+        """
+        mask = (x1 > data) | (x2 < data)
+        return Align.fill_noise(data, mask, x1, x2)
+
+    @staticmethod
+    def fill_noise(data, mask, x1, x2):
         filtered = data.copy()
         rs = np.random.RandomState(0)
         filtered[mask] = rs.uniform(x1, x2, mask.sum()).astype(data.dtype)
-        return filtered
+        return filtered        
 
     @staticmethod
     def calculate_offsets(data_, upsample_factor):
